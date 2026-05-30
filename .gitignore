@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# Marksman runtime data & scratch output
+marksman_data.json
+demo_output.txt
+test_results.txt
+*.tmp

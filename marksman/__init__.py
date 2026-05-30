@@ -1,0 +1,43 @@
+"""Marksman -- a progress tracker for shooting sports.
+
+The core of the package analyses marked-up images of targets (the groupings of
+shots on a paper target), turns them into precise marksmanship metrics, and
+tracks how those metrics change over time -- overall, per weapon *category*,
+and per specific *weapon*.
+
+Layers (lowest to highest):
+
+* :mod:`marksman.models`    -- plain data: shots, weapons, sessions, targets.
+* :mod:`marksman.targets`   -- built-in target face specifications (ring sizes).
+* :mod:`marksman.grouping`  -- the analysis maths (group size, mean radius, score).
+* :mod:`marksman.imageio`   -- minimal PNG read/write (pure standard library).
+* :mod:`marksman.vision`    -- extract shot positions from a marked-up image.
+* :mod:`marksman.storage`   -- load/save the database (JSON).
+* :mod:`marksman.tracker`   -- aggregate sessions into progress reports.
+* :mod:`marksman.cli`       -- command line entry point.
+
+Every layer is standard-library only -- there are no third-party dependencies.
+"""
+
+from .models import (
+    Shot,
+    Weapon,
+    Session,
+    TargetSpec,
+    Ring,
+    GroupStats,
+)
+from .grouping import analyze_group, score_shot
+
+__all__ = [
+    "Shot",
+    "Weapon",
+    "Session",
+    "TargetSpec",
+    "Ring",
+    "GroupStats",
+    "analyze_group",
+    "score_shot",
+]
+
+__version__ = "0.1.0"
