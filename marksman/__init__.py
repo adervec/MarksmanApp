@@ -14,6 +14,8 @@ Layers (lowest to highest):
 * :mod:`marksman.vision`    -- extract shot positions from a marked-up image.
 * :mod:`marksman.storage`   -- load/save the database (JSON).
 * :mod:`marksman.tracker`   -- aggregate sessions into progress reports.
+* :mod:`marksman.render`    -- redraw a result diagram from stored shot data.
+* :mod:`marksman.theme`     -- visual "skins" for the terminal reports.
 * :mod:`marksman.cli`       -- command line entry point.
 
 Every layer is standard-library only -- there are no third-party dependencies.
@@ -28,6 +30,8 @@ from .models import (
     GroupStats,
 )
 from .grouping import analyze_group, score_shot
+from .render import render_session, save_recreation
+from .theme import Theme, Painter, get_theme, list_themes
 
 __all__ = [
     "Shot",
@@ -38,6 +42,12 @@ __all__ = [
     "GroupStats",
     "analyze_group",
     "score_shot",
+    "render_session",
+    "save_recreation",
+    "Theme",
+    "Painter",
+    "get_theme",
+    "list_themes",
 ]
 
 __version__ = "0.1.0"

@@ -277,12 +277,24 @@ class Session:
     distance_m: Optional[float] = None
     target_name: str = ""
     ammo: str = ""
-    image_path: str = ""
+    image_path: str = ""            # source still image (may be bulky)
+    video_path: str = ""            # source video (may be bulky)
     notes: str = ""
+    # A lightweight diagram redrawn from the shot coordinates.  Set once the
+    # source media has been cleaned up so the visual result is preserved.
+    recreation_path: str = ""
+    # True when the bulky source media has been deleted to reclaim space.  The
+    # shots (and therefore a recreation) are always retained.
+    media_cleaned: bool = False
 
     @staticmethod
     def today_iso() -> str:
         return date.today().isoformat()
+
+    @property
+    def source_media_paths(self) -> List[str]:
+        """The bulky *source* media this session references (image, video)."""
+        return [p for p in (self.image_path, self.video_path) if p]
 
     def to_dict(self) -> dict:
         return {
@@ -295,7 +307,10 @@ class Session:
             "target_name": self.target_name,
             "ammo": self.ammo,
             "image_path": self.image_path,
+            "video_path": self.video_path,
             "notes": self.notes,
+            "recreation_path": self.recreation_path,
+            "media_cleaned": self.media_cleaned,
         }
 
     @classmethod
@@ -310,7 +325,10 @@ class Session:
             target_name=d.get("target_name", ""),
             ammo=d.get("ammo", ""),
             image_path=d.get("image_path", ""),
+            video_path=d.get("video_path", ""),
             notes=d.get("notes", ""),
+            recreation_path=d.get("recreation_path", ""),
+            media_cleaned=d.get("media_cleaned", False),
         )
 
     @property

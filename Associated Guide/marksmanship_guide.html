@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Indoor Marksmanship Improvement Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0d0f;
+    --bg-2: #11161a;
+    --bg-3: #161c22;
+    --panel: #0f1418;
+    --line: #1f272e;
+    --line-2: #2a343d;
+    --ink: #d4dde3;
+    --ink-2: #8b97a3;
+    --ink-3: #5a6571;
+    --accent: #e8b04b;       /* brass casing */
+    --accent-2: #c2410c;     /* hot barrel */
+    --hit: #4ade80;          /* X-ring green */
+    --miss: #ef4444;
+    --rule: #1a2128;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+    --sans: 'Inter', -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-weight: 300;
+    line-height: 1.65;
+    min-height: 100vh;
+    /* subtle film grain */
+    background-image:
+      radial-gradient(at 15% 10%, rgba(232,176,75,0.025) 0%, transparent 50%),
+      radial-gradient(at 85% 80%, rgba(194,65,12,0.02) 0%, transparent 50%);
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.5;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 2;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  /* ---------- HEADER / COVER ---------- */
+  header.cover {
+    border-bottom: 1px solid var(--line);
+    padding: 56px 0 64px;
+    margin-bottom: 56px;
+    position: relative;
+  }
+
+  .stamp {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    border: 1px solid var(--accent);
+    padding: 6px 14px;
+    border-radius: 2px;
+    margin-bottom: 28px;
+  }
+
+  .stamp::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  h1.title {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: clamp(40px, 7vw, 78px);
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    color: var(--ink);
+    margin-bottom: 18px;
+  }
+
+  h1.title span {
+    color: var(--accent);
+    font-style: italic;
+    font-weight: 300;
+  }
+
+  .subtitle {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink-2);
+    letter-spacing: 0.05em;
+    max-width: 620px;
+    line-height: 1.7;
+  }
+
+  .meta-grid {
+    margin-top: 40px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    border-top: 1px dashed var(--line-2);
+    padding-top: 28px;
+  }
+
+  .meta-cell {
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  .meta-cell .label {
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 6px;
+    font-size: 10px;
+  }
+
+  .meta-cell .value {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  /* ---------- TABLE OF CONTENTS ---------- */
+  nav.toc {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    padding: 28px 32px;
+    margin-bottom: 64px;
+  }
+
+  nav.toc h2 {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    font-weight: 500;
+  }
+
+  nav.toc ol {
+    list-style: none;
+    columns: 2;
+    column-gap: 40px;
+  }
+
+  nav.toc li {
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 7px 0;
+    break-inside: avoid;
+    color: var(--ink-2);
+    display: flex;
+    gap: 12px;
+    transition: color 0.15s;
+  }
+
+  nav.toc li:hover { color: var(--accent); }
+
+  nav.toc li a {
+    color: inherit;
+    text-decoration: none;
+    display: flex;
+    gap: 12px;
+    width: 100%;
+  }
+
+  nav.toc .num {
+    color: var(--accent);
+    font-weight: 700;
+    min-width: 24px;
+  }
+
+  @media (max-width: 720px) {
+    nav.toc ol { columns: 1; }
+  }
+
+  /* ---------- SECTIONS ---------- */
+  section {
+    margin-bottom: 80px;
+    scroll-margin-top: 20px;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+    margin-bottom: 36px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .section-head .id {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    background: rgba(232,176,75,0.08);
+    border: 1px solid rgba(232,176,75,0.3);
+    padding: 8px 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    letter-spacing: 0.08em;
+  }
+
+  h2.section-title {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: clamp(28px, 4vw, 40px);
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+  }
+
+  h3 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 20px;
+    color: var(--ink);
+    margin: 32px 0 12px;
+    letter-spacing: -0.015em;
+  }
+
+  h3::before {
+    content: '— ';
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  h4 {
+    font-family: var(--mono);
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--ink-2);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin: 24px 0 10px;
+  }
+
+  p {
+    margin-bottom: 14px;
+    color: var(--ink);
+    font-size: 15.5px;
+    max-width: 75ch;
+  }
+
+  strong {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* ---------- LISTS ---------- */
+  ul, ol {
+    margin: 12px 0 18px 0;
+    padding-left: 0;
+    list-style: none;
+  }
+
+  ul li, ol li {
+    position: relative;
+    padding: 6px 0 6px 30px;
+    color: var(--ink);
+    font-size: 15px;
+    max-width: 75ch;
+  }
+
+  ul li::before {
+    content: '▸';
+    position: absolute;
+    left: 4px;
+    top: 6px;
+    color: var(--accent);
+    font-size: 12px;
+  }
+
+  ol {
+    counter-reset: olist;
+  }
+
+  ol li {
+    counter-increment: olist;
+  }
+
+  ol li::before {
+    content: counter(olist, decimal-leading-zero);
+    position: absolute;
+    left: 0;
+    top: 6px;
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  /* ---------- CALLOUTS ---------- */
+  .callout {
+    border: 1px solid var(--line-2);
+    padding: 20px 24px;
+    margin: 24px 0;
+    background: var(--bg-2);
+    position: relative;
+  }
+
+  .callout.warn {
+    border-left: 3px solid var(--miss);
+    background: rgba(239,68,68,0.04);
+  }
+
+  .callout.tip {
+    border-left: 3px solid var(--accent);
+    background: rgba(232,176,75,0.04);
+  }
+
+  .callout.key {
+    border-left: 3px solid var(--hit);
+    background: rgba(74,222,128,0.03);
+  }
+
+  .callout .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 700;
+  }
+
+  .callout.warn .tag { color: var(--miss); }
+  .callout.tip .tag { color: var(--accent); }
+  .callout.key .tag { color: var(--hit); }
+
+  .callout p {
+    margin-bottom: 8px;
+    font-size: 14.5px;
+  }
+
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* ---------- TABLES ---------- */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 24px 0;
+    border: 1px solid var(--line);
+    background: var(--panel);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  th {
+    text-align: left;
+    padding: 14px 18px;
+    background: var(--bg-3);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--line-2);
+  }
+
+  td {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+    color: var(--ink);
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  tr:hover td { background: rgba(232,176,75,0.03); }
+
+  td.mono {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  td.center { text-align: center; }
+
+  /* error chart specific */
+  .err-direction {
+    font-family: var(--mono);
+    font-weight: 700;
+    color: var(--miss);
+    font-size: 13px;
+  }
+
+  /* ---------- FUNDAMENTALS GRID ---------- */
+  .fund-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin: 24px 0;
+  }
+
+  .fund-card {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    padding: 22px;
+    position: relative;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .fund-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .fund-card .n {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .fund-card .name {
+    font-weight: 600;
+    font-size: 17px;
+    color: var(--ink);
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+  }
+
+  .fund-card p {
+    font-size: 14px;
+    color: var(--ink-2);
+    margin: 0;
+  }
+
+  /* ---------- BENCHMARK CARDS ---------- */
+  .bench-row {
+    display: grid;
+    grid-template-columns: 2fr repeat(3, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    margin-bottom: 1px;
+  }
+
+  .bench-row.head {
+    background: var(--bg-3);
+  }
+
+  .bench-row .cell {
+    background: var(--panel);
+    padding: 14px 18px;
+    font-size: 14px;
+  }
+
+  .bench-row.head .cell {
+    background: var(--bg-3);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  .bench-row .cell.metric {
+    font-family: var(--mono);
+    font-size: 14px;
+    text-align: center;
+    font-weight: 500;
+  }
+
+  .bench-row .cell.metric.novice { color: var(--ink-2); }
+  .bench-row .cell.metric.inter { color: var(--accent); }
+  .bench-row .cell.metric.adv { color: var(--hit); font-weight: 700; }
+
+  @media (max-width: 720px) {
+    .bench-row { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- WEEK PLAN ---------- */
+  .week-list {
+    display: grid;
+    gap: 8px;
+    margin: 24px 0;
+  }
+
+  .week {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 0;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    transition: border-color 0.2s;
+  }
+
+  .week:hover { border-color: var(--line-2); }
+
+  .week .wnum {
+    background: var(--bg-3);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid var(--line);
+  }
+
+  .week .wbody { padding: 16px 20px; }
+
+  .week .wbody .focus {
+    font-weight: 600;
+    color: var(--ink);
+    font-size: 15px;
+    margin-bottom: 4px;
+  }
+
+  .week .wbody .detail {
+    font-size: 13.5px;
+    color: var(--ink-2);
+    line-height: 1.55;
+  }
+
+  .week .wbody .detail strong {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  /* ---------- DRILLS ---------- */
+  .drill {
+    border-top: 1px solid var(--line);
+    padding: 20px 0;
+  }
+
+  .drill:first-of-type { border-top: none; }
+
+  .drill-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 8px;
+  }
+
+  .drill-code {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--accent);
+    background: rgba(232,176,75,0.08);
+    padding: 3px 8px;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  .drill-name {
+    font-weight: 600;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 0;
+  }
+
+  .drill p {
+    margin-bottom: 8px;
+    font-size: 14.5px;
+    color: var(--ink);
+  }
+
+  /* ---------- FOOTER ---------- */
+  footer {
+    margin-top: 80px;
+    padding: 40px 0 60px;
+    border-top: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-3);
+    text-align: center;
+  }
+
+  footer .sig {
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  /* ---------- CROSSHAIR DIVIDER ---------- */
+  .crosshair {
+    text-align: center;
+    margin: 48px 0;
+    color: var(--accent);
+    font-size: 18px;
+    letter-spacing: 1em;
+    opacity: 0.5;
+  }
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width: 720px) {
+    .wrap { padding: 0 20px; }
+    .section-head { flex-direction: column; gap: 12px; }
+    th, td { padding: 10px 12px; font-size: 13px; }
+  }
+
+  /* selection */
+  ::selection {
+    background: var(--accent);
+    color: var(--bg);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ======================== HEADER ======================== -->
+<header class="cover">
+  <div class="stamp">CLASSIFICATION · TRAINING DOCUMENT</div>
+  <h1 class="title">Indoor Marksmanship<br><span>improvement guide</span></h1>
+  <p class="subtitle">A practical program for Ontario sport shooters — whether you own your firearms or rent at the lane. Built around 25-yard indoor ranges like Target Sports Canada, with technique that transfers across rimfire and centrefire pistols, revolvers, rifles, and carbines.</p>
+
+  <div class="meta-grid">
+    <div class="meta-cell">
+      <div class="label">Home Range</div>
+      <div class="value">Target Sports Canada — Gormley, ON</div>
+    </div>
+    <div class="meta-cell">
+      <div class="label">Primary Distance</div>
+      <div class="value">25 yards / metres · indoor</div>
+    </div>
+    <div class="meta-cell">
+      <div class="label">Platforms</div>
+      <div class="value">Own or rented · pistol · revolver · rifle · carbine</div>
+    </div>
+    <div class="meta-cell">
+      <div class="label">Cycle Length</div>
+      <div class="value">12 weeks · ~600 rds per platform</div>
+    </div>
+  </div>
+</header>
+
+<!-- ======================== TOC ======================== -->
+<nav class="toc">
+  <h2>// Contents</h2>
+  <ol>
+    <li><a href="#s1"><span class="num">01</span>How to Use This Guide</a></li>
+    <li><a href="#s2"><span class="num">02</span>The Seven Fundamentals</a></li>
+    <li><a href="#s3"><span class="num">03</span>Equipment & Ammunition</a></li>
+    <li><a href="#s4"><span class="num">04</span>Rentable Platforms — What to Try</a></li>
+    <li><a href="#s5"><span class="num">05</span>Rifle & Carbine Technique</a></li>
+    <li><a href="#s6"><span class="num">06</span>Pistol & Revolver Technique</a></li>
+    <li><a href="#s7"><span class="num">07</span>Sights, Trigger, Breathing</a></li>
+    <li><a href="#s8"><span class="num">08</span>Diagnosing Your Groups</a></li>
+    <li><a href="#s9"><span class="num">09</span>Dry-Fire Program</a></li>
+    <li><a href="#s10"><span class="num">10</span>Live-Fire Drills</a></li>
+    <li><a href="#s11"><span class="num">11</span>The 12-Week Plan</a></li>
+    <li><a href="#s12"><span class="num">12</span>Range Day & Etiquette</a></li>
+    <li><a href="#s13"><span class="num">13</span>Scorebook & Metrics</a></li>
+    <li><a href="#s14"><span class="num">14</span>Mental Game</a></li>
+    <li><a href="#s15"><span class="num">15</span>Ontario Legal Refresher</a></li>
+    <li><a href="#s16"><span class="num">16</span>Ranges Near Toronto & Going Further</a></li>
+  </ol>
+</nav>
+
+<!-- ======================== 01 ======================== -->
+<section id="s1">
+  <div class="section-head">
+    <div class="id">§ 01</div>
+    <h2 class="section-title">How to Use This Guide</h2>
+  </div>
+
+  <p>This guide is built for an Ontario sport shooter training at a 25-yard indoor range — Target Sports Canada in Gormley is used as the running example. It works whether you own your firearms or rent them at the lane, and whether you shoot a rimfire plinker, a service pistol, a revolver, or a carbine. Every drill, distance, and timing is designed for an indoor lane with the rules and rhythms of a public commercial range.</p>
+
+  <p>The structure follows how skill is actually built: fundamentals first, then a tour of what you can rent, then platform technique, then diagnostic tools to find what is breaking down, then a repeatable training cycle of dry-fire and live-fire. The 12-week plan in §11 ties it all together.</p>
+
+  <div class="callout key">
+    <div class="tag">▸ Two Operating Principles</div>
+    <p><strong>Dry-fire wins matches.</strong> Almost every measurable gain in trigger control, sight alignment, and recoil management comes from dry practice between range trips. Live ammo is for verification, not learning.</p>
+    <p><strong>Slow is smooth, smooth is fast.</strong> Speed comes from eliminating wasted motion and bad reps, not from rushing. Build perfect shots first; speed up only when each shot is still perfect.</p>
+  </div>
+</section>
+
+<!-- ======================== 02 ======================== -->
+<section id="s2">
+  <div class="section-head">
+    <div class="id">§ 02</div>
+    <h2 class="section-title">The Seven Fundamentals</h2>
+  </div>
+
+  <p>Every accurate shot — rifle or pistol, .22 or 9mm, bolt gun or revolver — is the product of the same seven elements. Most accuracy problems are a breakdown in one of these, and diagnosing which is the core skill of the sport.</p>
+
+  <div class="fund-grid">
+    <div class="fund-card">
+      <div class="n">01 / POSITION</div>
+      <div class="name">Stance</div>
+      <p>Stable, repeatable, natural. The body is the platform; the firearm rests on it. A good position needs no muscle tension to hold the sights on target — that is natural point of aim.</p>
+    </div>
+    <div class="fund-card">
+      <div class="n">02 / CONTACT</div>
+      <div class="name">Grip / Hold</div>
+      <p>Firm and consistent contact between hand and firearm. Pistol: ~60% support hand, 40% firing hand. Rifle: firing hand is light; support and bone structure carry the weight.</p>
+    </div>
+    <div class="fund-card">
+      <div class="n">03 / OPTICS</div>
+      <div class="name">Sight Alignment</div>
+      <p>Front sight centred in the rear notch, equal light strips, tops level. This relationship is between the sights themselves — the target is secondary.</p>
+    </div>
+    <div class="fund-card">
+      <div class="n">04 / AIM</div>
+      <div class="name">Sight Picture</div>
+      <p>Aligned sights placed correctly on the target. 6 o'clock hold (front sight under the black) or centre hold, whichever your firearm is zeroed for.</p>
+    </div>
+    <div class="fund-card">
+      <div class="n">05 / RHYTHM</div>
+      <div class="name">Breath Control</div>
+      <p>Fire in the natural respiratory pause — after a normal exhale, before the next inhale. 4–7 second window. Do not hold until vision degrades.</p>
+    </div>
+    <div class="fund-card">
+      <div class="n">06 / PRESS</div>
+      <div class="name">Trigger Control</div>
+      <p>Smooth, straight-to-the-rear press that does not disturb sight alignment. The break should slightly surprise you — if you predict it, you are anticipating recoil.</p>
+    </div>
+    <div class="fund-card">
+      <div class="n">07 / FINISH</div>
+      <div class="name">Follow-Through</div>
+      <p>Hold the trigger to the rear, keep sights on target, call the shot before re-establishing. Releasing the trigger or moving the head before the bullet leaves destroys accuracy.</p>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <div class="tag">▸ The Most Important Habit</div>
+    <p><strong>Call the shot.</strong> After every shot, before looking at the target, say where the sights were when the trigger broke. "Centre." "Low left." "High." If your call matches the hole, your fundamentals are working. If your call is good but the hole is elsewhere, the zero or ammo is off. If you cannot call the shot, you are not seeing the sights at the break — fix that first.</p>
+  </div>
+</section>
+
+<!-- ======================== 03 ======================== -->
+<section id="s3">
+  <div class="section-head">
+    <div class="id">§ 03</div>
+    <h2 class="section-title">Equipment & Ammunition</h2>
+  </div>
+
+  <h3>Eye and Ear Protection</h3>
+  <p>Indoor pistol ranges are loud and full of muzzle blast. <strong>Double up:</strong> foam plugs underneath, over-ear muffs on top. Electronic muffs are worth the money — they cut the shot but pass range commands. Wraparound safety glasses are mandatory; yellow or light-amber lenses brighten the sight picture under typical indoor lighting.</p>
+
+  <h3>Lead Exposure</h3>
+  <div class="callout warn">
+    <div class="tag">▸ Indoor-Specific Risk</div>
+    <p>Indoor ranges concentrate airborne lead from primers and bullet bases. Reviews of Target Sports Canada flag ventilation as adequate but not exceptional. Wash hands and face with cold water and lead-removal soap (D-Lead, Hygenall) before eating, drinking, or touching your phone. Change clothes when you get home — especially if you have children. Wet-wipe your range bag interior. Annual blood-lead testing is reasonable for regular indoor shooters.</p>
+  </div>
+
+  <h3>Ammunition — Rimfire (.22 LR)</h3>
+  <p>If you shoot a .22 — your own bolt gun or a rental — rimfire is picky. Two rifles off the same line can prefer entirely different ammo. If you own the rifle, run a deliberate ammo test before settling on a load:</p>
+  <ol>
+    <li>Buy one box each of 4–6 different match or premium loads — CCI Standard Velocity, SK Standard Plus, RWS Target Rifle, Federal Gold Medal Match, Eley Sport, and Lapua Center-X if budget allows.</li>
+    <li>Shoot five 5-shot groups with each, from a rest, at 25 yards, on a barrel that has been fouled with 5–10 rounds of that ammo first.</li>
+    <li>Measure average group size (centre-to-centre of the two widest holes). Smallest = match ammo. Cheapest acceptable = practice ammo.</li>
+  </ol>
+  <p>Avoid high-velocity hunting loads (Mini-Mag, Stinger) for precision — they group larger and shift POI between brands. On rentals you usually shoot the house ammo, which is fine for fundamentals.</p>
+
+  <h3>Ammunition — Centrefire Pistol (9mm and friends)</h3>
+  <p>Centrefire pistol calibres (9mm, .40 S&amp;W, .45 ACP, .38 Special, .357 Magnum) are far less finicky than rimfire. A few universal notes:</p>
+  <ul>
+    <li><strong>Bullet weight:</strong> in 9mm, 115gr is cheapest and softest — ideal for fundamentals. 124gr is the common match weight. 147gr is heaviest, slowest, and pushes rather than snaps — easier on the wrist in long sessions.</li>
+    <li><strong>Bullet profile:</strong> jacketed (FMJ) or plated. Avoid unjacketed lead in a revolver if your range bans it — verify before bringing reloads.</li>
+    <li><strong>Brass vs. steel:</strong> some indoor ranges prohibit steel-cased ammo. Brass (Federal, Winchester, Blazer Brass, S&amp;B) is universally accepted and cleaner.</li>
+    <li><strong>Avoid +P</strong> for paper practice — it costs more and beats up the gun for no scoring benefit. Save it for any defensive-load familiarization.</li>
+    <li><strong>Match the recoil to the goal:</strong> when first learning, the softest-shooting load you can find in the calibre builds better habits than a hot one.</li>
+  </ul>
+
+  <h3>If You Are Renting — Buy Range Ammo</h3>
+  <p>Almost every range that rents firearms requires you to buy their ammunition for the rental (it protects their guns from unknown handloads). Budget for it. House ammo is typically clean, brass-cased FMJ in standard weights — perfectly good for everything in this guide.</p>
+
+  <h3>Range Bag Checklist</h3>
+  <ul>
+    <li>Your firearm(s) cased, with trigger locks if travelling under ATT — or nothing to bring if you are renting</li>
+    <li>ATT and PAL/RPAL on your person — not in the case</li>
+    <li>Ammunition in original boxes or labelled containers</li>
+    <li>Eye protection (primary + spare); hearing protection (plugs + muffs)</li>
+    <li>Targets (B-8, NRA A-23, plain bull, sighting grid)</li>
+    <li>Stapler or pasters, masking tape, Sharpie, scorebook</li>
+    <li>Spotting scope or 8x–10x binoculars</li>
+    <li>Bore snake, patches, solvent, lubricant; hex keys / screwdriver bits for scope and action screws</li>
+    <li>Snap caps (.22 LR and 9mm) for dry-fire and malfunction practice</li>
+    <li>Lead-removal hand wipes, water, snack</li>
+  </ul>
+</section>
+
+<!-- ======================== 04 ======================== -->
+<section id="s4">
+  <div class="section-head">
+    <div class="id">§ 04</div>
+    <h2 class="section-title">Rentable Platforms — What to Try</h2>
+  </div>
+
+  <p>One of the best things about a range like Target Sports Canada — which keeps a stocked rental case and runs beginner packages — is that you can try a wide variety of firearms before owning anything. TSC's 20 pistol lanes accommodate pistols, carbines, and shotguns out to 25 metres. Rentals usually require buying the range's ammunition, and many ranges ask that first-timers shoot with an instructor or RSO. This is not an exhaustive catalogue — it is a diverse cross-section of what is popular and worth your time.</p>
+
+  <div class="callout tip">
+    <div class="tag">▸ How to Demo Smartly</div>
+    <p>Do not blow through ten guns in one visit — recoil fatigue and novelty wreck your fundamentals. Pick two or three per session that teach you something different (e.g. one rimfire pistol, one striker 9mm, one carbine). Shoot each slowly, on paper, and apply the same shot process from §02. The point of renting is to learn what fits your hand, your eyes, and the discipline you want to pursue.</p>
+  </div>
+
+  <h3>Rimfire — Start Here</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Platform</th><th>Typical Examples</th><th>Why Try It</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">.22 pistol</td><td>Ruger Mark IV, S&amp;W Victory, Browning Buck Mark</td><td>Almost no recoil, cheap to shoot, ruthlessly exposes trigger errors. The best teacher of pistol fundamentals that exists.</td></tr>
+        <tr><td class="mono">.22 rifle (bolt)</td><td>Savage Mark II, CZ 457, Tikka T1x</td><td>Pure precision. Quiet, accurate, forgiving. Ideal for learning position and breath control.</td></tr>
+        <tr><td class="mono">.22 rifle (semi)</td><td>Ruger 10/22</td><td>Fun, fast, low-cost follow-up shots. Great for learning sight recovery without recoil.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Centrefire Pistols & Revolvers</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Platform</th><th>Typical Examples</th><th>Why Try It</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">Striker 9mm</td><td>Glock 17/19, S&amp;W M&amp;P, SIG P320, Walther PDP</td><td>The default modern service pistol. Light, consistent trigger; the platform most competition and defensive shooting is built around.</td></tr>
+        <tr><td class="mono">Hammer 9mm</td><td>CZ 75, Beretta 92, SIG P226</td><td>Teaches the double-action-to-single-action transition. Heavier and softer-shooting; loved by traditionalists and bullseye shooters.</td></tr>
+        <tr><td class="mono">1911 / 2011</td><td>.45 ACP or 9mm</td><td>Crisp single-action trigger, classic ergonomics. A benchmark every pistol shooter should feel once.</td></tr>
+        <tr><td class="mono">.40 / .45 pistol</td><td>Glock 22, 1911 .45</td><td>More recoil per shot — useful to feel how calibre changes grip demand. Not where beginners should start.</td></tr>
+        <tr><td class="mono">DA/SA revolver</td><td>S&amp;W 686, Ruger GP100 (.38/.357)</td><td>The fundamentals teacher of the wheelgun world. Shoot .38 Special for mild recoil; step to .357 Magnum to feel real blast.</td></tr>
+        <tr><td class="mono">Unconventional revolver</td><td>Chiappa Rhino</td><td>Low bore axis fires from the bottom chamber — flat recoil, very different feel. A fun, instructive oddity if your range stocks one.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Carbines & Rifles (range-permitting)</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Platform</th><th>Typical Examples</th><th>Why Try It</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">9mm PCC</td><td>Pistol-calibre carbines</td><td>Soft, quiet, easy to hit with at 25 m. A confidence-builder and a popular competition class.</td></tr>
+        <tr><td class="mono">.223 / 5.56 carbine</td><td>AR-pattern sporting rifles (where permitted)</td><td>Light recoil, fast on target, optic-friendly. Teaches red-dot and modern carbine fundamentals.</td></tr>
+        <tr><td class="mono">Shotgun</td><td>12 / 20 gauge pump or semi</td><td>The recoil eye-opener. Worth feeling once for respect and technique; a 20 gauge is gentler to start.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout warn">
+    <div class="tag">▸ Renting vs. Owning</div>
+    <p>Renting needs no licence at most ranges that offer instructed shooting — it is a legal way to try the sport before committing. <strong>Buying or transporting your own restricted firearm requires an RPAL and an ATT</strong> (see §15). If a rental clicks and you want one of your own, that is the moment to start the licensing path.</p>
+  </div>
+</section>
+
+<!-- ======================== 05 ======================== -->
+<section id="s5">
+  <div class="section-head">
+    <div class="id">§ 05</div>
+    <h2 class="section-title">Rifle & Carbine Technique</h2>
+  </div>
+
+  <p>Whether you are shooting a borrowed .22 bolt gun, a 10/22, or a rented carbine, the platform technique is the same: a stable position, a consistent cheek weld, and a clean trigger press that does not disturb the sights. The notes below cover bench and standing work at a 25-yard indoor lane.</p>
+
+  <h3>Bench Position</h3>
+  <ul>
+    <li><strong>Forend on a sandbag, bipod, or front rest</strong> — never on a hard surface. The barrel must not touch anything.</li>
+    <li><strong>Rear bag under the toe of the stock.</strong> Elevation comes from squeezing or relaxing the rear bag, not from muscling the rifle.</li>
+    <li><strong>Shoulder pocket:</strong> buttstock lives in the pocket formed by the deltoid and pectoral, loaded firmly enough that the rifle moves with you when you breathe.</li>
+    <li><strong>Cheek weld:</strong> head comes down to the rifle, not the other way around. Same spot every time. On a rental, take a few dry seconds to find a repeatable weld before the first shot.</li>
+    <li><strong>Firing hand:</strong> light. Pulls the rifle straight back into the shoulder, no torque or lift.</li>
+    <li><strong>Support hand:</strong> pinches the rear bag for fine elevation, or rests still. Not gripping the rifle.</li>
+  </ul>
+
+  <div class="callout tip">
+    <div class="tag">▸ Natural Point of Aim Test</div>
+    <p>Get into position with sights on target. Close eyes for 3 seconds, breathe normally, open them. If the sights have drifted, your body is not naturally aimed there — you are muscling. Slide the bag, adjust your hips, shift position until the rifle returns to target on its own. NPA is the single biggest force-multiplier in rifle shooting.</p>
+  </div>
+
+  <h3>Working the Action</h3>
+  <p>The action cycle is part of the shot, not a separate task. For a <strong>bolt gun:</strong></p>
+  <ol>
+    <li>After firing, complete follow-through — eyes on sights, trigger held back, call the shot.</li>
+    <li>Without removing your cheek, lift the bolt handle with thumb and index finger of the firing hand.</li>
+    <li>Pull straight back, eject. Drive straight forward to chamber, rotate down to lock.</li>
+    <li>Re-establish grip, settle, find sights, return to NPA. Only then begin the next shot.</li>
+  </ol>
+  <p>For a <strong>semi-auto</strong> (10/22, PCC, carbine), there is no manual cycle — but the same discipline applies to recoil recovery: ride the recoil, let the sights settle back onto target, reset the trigger, and only then press again. Do not chase a fast cadence at the cost of the sight picture.</p>
+
+  <h3>Optics & Zero</h3>
+  <p>If the rifle wears a scope with adjustable parallax, set it to your shooting distance — 25 yards/metres indoors. Parallax error is the most overlooked cause of unexplained vertical stringing. For a red-dot on a carbine, both eyes open, put the dot where you want the hit; dot guns are fast and forgiving at indoor distances.</p>
+  <p>If you own the rifle, zero so POI is centre at 25 yards/metres with your chosen ammo. Rimfire has a flat trajectory out to 50 yards, so a 25-yard zero holds close enough for outdoor work.</p>
+</section>
+
+<!-- ======================== 06 ======================== -->
+<section id="s6">
+  <div class="section-head">
+    <div class="id">§ 06</div>
+    <h2 class="section-title">Pistol & Revolver Technique</h2>
+  </div>
+
+  <p>This is the technique that carries across every handgun in the rental case — striker 9mm, hammer-fired DA/SA, 1911, or revolver. Grip and trigger control do 90% of the work; the rest is consistency.</p>
+
+  <h3>Grip — The Most Important Section</h3>
+  <p>A correct two-handed grip solves more problems than any other adjustment.</p>
+  <ol>
+    <li><strong>Firing hand:</strong> the web of the hand drives high into the tang/backstrap. Ride it as high as possible — the higher the hand, the closer recoil runs through your forearm, and the flatter the gun shoots.</li>
+    <li>Wrap fingers around the front of the grip. Trigger finger stays off the trigger until you are on target.</li>
+    <li><strong>Firing-hand thumb:</strong> high, pointed forward, relaxed. Do not curl it down — it pulls the muzzle off line.</li>
+    <li><strong>Support hand:</strong> meets the firing hand at ~45°. The heel fills the empty space on the grip panel left by the firing hand. Fingers wrap over the firing-hand fingers.</li>
+    <li><strong>Support-hand thumb:</strong> parallel to the firing-hand thumb, pointed forward, alongside the frame.</li>
+    <li><strong>Pressure:</strong> ~60% support, 40% firing. Both squeeze front-to-back, not side-to-side.</li>
+  </ol>
+
+  <div class="callout warn">
+    <div class="tag">▸ Two Critical Safety Differences by Type</div>
+    <p><strong>Semi-auto slide bite:</strong> keep both thumbs forward and low, clear of the reciprocating slide. A high firing-hand thumb behind the slide gets cut.</p>
+    <p><strong>Revolver cylinder gap:</strong> a revolver vents flame and hot, lead-laden gas sideways from the cylinder gap on every shot. Keep both thumbs behind the front of the cylinder — never alongside or in front of the gap. This is the most common new-revolver-shooter injury.</p>
+  </div>
+
+  <h3>Stance — Isosceles (Recommended)</h3>
+  <ul>
+    <li><strong>Feet</strong> shoulder-width, toes pointed at the target.</li>
+    <li><strong>Knees</strong> slightly bent, soft.</li>
+    <li><strong>Hips</strong> square to the target.</li>
+    <li><strong>Arms</strong> both extended, elbows straight but not locked. Forms an isosceles triangle from shoulders to hands.</li>
+    <li><strong>Shoulders</strong> slightly rolled forward, weight on the balls of the feet.</li>
+  </ul>
+  <p>Isosceles absorbs recoil evenly through both arms and is the easiest stance to repeat under any handgun. A bladed Weaver stance — firing-side foot back, support arm bent, push-pull tension between the hands — is the classic for one-handed bullseye precision (NRA Conventional Pistol) if you pursue that discipline.</p>
+
+  <h3>Trigger Type by Platform</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Action Type</th><th>Trigger Feel</th><th>What to Practice</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">Striker (Glock etc.)</td><td>Consistent medium pull every shot, short reset.</td><td>One smooth press; find the reset and ride it.</td></tr>
+        <tr><td class="mono">DA/SA hammer</td><td>Long heavy first shot, then light short shots.</td><td>The DA-to-SA transition. Stage nothing — one smooth first press.</td></tr>
+        <tr><td class="mono">Single-action (1911)</td><td>Light, crisp, short. Breaks like a glass rod.</td><td>Minimal movement. Easy to shoot well, easy to slap.</td></tr>
+        <tr><td class="mono">Revolver SA</td><td>Cock the hammer first; very light press.</td><td>Best for precision — use for slow-fire bullseye.</td></tr>
+        <tr><td class="mono">Revolver DA</td><td>Long, heavy (10–12 lb) press cocks and drops.</td><td>One continuous smooth roll. The hardest pure-trigger skill there is.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Whatever the action, the press is the same in principle: straight to the rear, smooth, rising pressure, sights undisturbed, with follow-through after the break. The trigger weight changes; the discipline does not.</p>
+</section>
+
+<!-- ======================== 07 ======================== -->
+<section id="s7">
+  <div class="section-head">
+    <div class="id">§ 07</div>
+    <h2 class="section-title">Sights, Trigger, Breathing in Detail</h2>
+  </div>
+
+  <h3>Sight Focus</h3>
+  <p><strong>Front sight sharp.</strong> Rear sight slightly blurred. Target distinctly blurred. The eye cannot focus on three planes simultaneously — if you focus on the target, the sights blur and small alignment errors translate into large misses.</p>
+  <ul>
+    <li>Front post centred in the rear notch — equal light strips on both sides.</li>
+    <li>Top of front post level with top of rear notch — no see-saw.</li>
+    <li>The relationship between the sights is more important than where the sights are on the target. A perfectly aligned shot slightly off-centre is still a 9; a misaligned shot is anywhere.</li>
+  </ul>
+
+  <h3>Sight Picture Options</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Hold</th><th>Description</th><th>Best For</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">6 o'clock</td><td>Top of front sight just under the bottom of the black bullseye. Sight "cradles" the bull.</td><td>Bullseye / NRA Conventional</td></tr>
+        <tr><td class="mono">Centre hold</td><td>Top of front sight in the centre of the bull, covering the X.</td><td>Combat / silhouette / most defensive sights</td></tr>
+        <tr><td class="mono">Sub-six</td><td>Front sight a visible gap below the black.</td><td>Bright lighting, small bulls, fine front blades</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Pick one hold and zero the firearm for it. Switching between holds at different distances introduces error and shooter doubt.</p>
+
+  <h3>Trigger — The Compressed Surprise Break</h3>
+  <p>Press straight to the rear, smoothly, in a continuous motion, with rising pressure, until it breaks. You should know it is going to break, but not the exact instant. This eliminates anticipation — the flinch that pulls the shot low-left for a right-handed shooter.</p>
+  <ol>
+    <li>Index finger on the trigger with the pad — not the joint, not the tip.</li>
+    <li>Take up any slack or pre-travel until you feel the wall.</li>
+    <li>Increase pressure smoothly, straight to the rear, while sight alignment is held.</li>
+    <li>The shot breaks.</li>
+    <li>Trigger stays to the rear through recoil.</li>
+    <li>Reset only after sights return to target.</li>
+  </ol>
+
+  <div class="callout key">
+    <div class="tag">▸ Ball-and-Dummy — The Diagnostic</div>
+    <p>Have a friend (or load the cylinder yourself, looking away) randomly mix live rounds and dummy rounds. When the gun fires, you cannot tell whether your flinch is yours or the recoil. When the hammer falls on a dummy, you see your flinch with absolute clarity — sights jump down and to the left as you "fight" a recoil that never came. There is no faster diagnostic for anticipation.</p>
+  </div>
+
+  <h3>Breath Control</h3>
+  <ol>
+    <li>Establish position, grip, sight picture.</li>
+    <li>Take 2–3 normal breaths.</li>
+    <li>Inhale, exhale partially (50–70%).</li>
+    <li>Hold at the natural pause — no straining, no full lung.</li>
+    <li>Press the trigger within 4–7 seconds of stopping.</li>
+    <li>If you have not broken in 7 seconds, abort. Breathe again. Restart. Vision degrades past 7–8 seconds of breath hold.</li>
+  </ol>
+</section>
+
+<!-- ======================== 08 ======================== -->
+<section id="s8">
+  <div class="section-head">
+    <div class="id">§ 08</div>
+    <h2 class="section-title">Diagnosing Your Groups</h2>
+  </div>
+
+  <p>If shots land in a tight group somewhere other than centre, that is a zero or hold issue — fix with sight adjustment. If shots are scattered, that is technique. The location of the scatter tells you what is breaking down.</p>
+
+  <p>The classic shot-error chart for a right-handed shooter (mirror for left-handed):</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Group Drifts To</th><th>Likely Cause</th><th>Fix</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="err-direction">↙ LOW-LEFT</span></td><td>Anticipating recoil (most common). Snatching trigger.</td><td>Ball-and-dummy. Slow dry-fire. Lighten grip slightly.</td></tr>
+        <tr><td><span class="err-direction">↓ LOW</span></td><td>Breaking wrist down at the break. Pushing the gun forward.</td><td>Lock wrists. Stop pushing — let the gun recoil into you.</td></tr>
+        <tr><td><span class="err-direction">← LEFT</span></td><td>Too much trigger finger (joint instead of pad). Thumbing the side.</td><td>Re-check finger placement. Relax thumbs.</td></tr>
+        <tr><td><span class="err-direction">↘ LOW-RIGHT</span></td><td>Tightening grip during the press. Trigger plucking.</td><td>Establish grip pressure before the press. Press only with the index finger.</td></tr>
+        <tr><td><span class="err-direction">→ RIGHT</span></td><td>Too little trigger finger (tip only). Pushing trigger sideways.</td><td>Move finger deeper. Press straight back.</td></tr>
+        <tr><td><span class="err-direction">↗ HIGH-RIGHT</span></td><td>Heeling — pushing with heel of palm in anticipation.</td><td>Relax firing hand. Let support hand carry grip pressure.</td></tr>
+        <tr><td><span class="err-direction">↑ HIGH</span></td><td>Jerking trigger. Head coming off rifle.</td><td>Smooth press. Hold cheek weld through follow-through.</td></tr>
+        <tr><td><span class="err-direction">VERTICAL STR.</span></td><td>Inconsistent shoulder pressure, breathing, parallax error.</td><td>Same shoulder load. Same point in respiratory pause. Set parallax to range distance.</td></tr>
+        <tr><td><span class="err-direction">HORIZONTAL STR.</span></td><td>Inconsistent cheek weld, canting rifle, NPA off.</td><td>Same cheek pressure. Use a level. Re-set NPA.</td></tr>
+        <tr><td><span class="err-direction">SCATTER</span></td><td>Loose scope mounts, bad ammo, inconsistent fundamentals.</td><td>Check screws with proper torque. Test other ammo. Slow down.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Use this chart only for groups that are otherwise tight in one direction. A 3-inch scatter with one flier means a single bad shot, not a systemic issue.</p>
+</section>
+
+<!-- ======================== 09 ======================== -->
+<section id="s9">
+  <div class="section-head">
+    <div class="id">§ 09</div>
+    <h2 class="section-title">Dry-Fire Program</h2>
+  </div>
+
+  <p>Dry-fire is the highest-leverage practice you can do. It is free, requires no range trip, and isolates the fundamentals that recoil otherwise masks. Fifteen minutes a day of structured dry-fire will outpace one expensive live-fire session per week.</p>
+
+  <div class="callout warn">
+    <div class="tag">▸ Safety Protocol — Every Session</div>
+    <p>1. Choose a room with a safe direction — an exterior wall backed by something that will stop a round.<br>
+    2. Remove all ammunition from the room. Put it behind a closed door.<br>
+    3. Verify the firearm is unloaded — visually and physically. Magazine out, chamber open, look in, finger in. Three times.<br>
+    4. State out loud: "This firearm is empty. I am beginning dry-fire practice."<br>
+    5. When done: "Dry-fire is over." Do not reload in the same room.</p>
+  </div>
+
+  <p>Use snap caps for any firearm with a hammer or that should not be dry-fired on an empty chamber — most centrefire pistols and revolvers are fine, but rimfires must never be dry-fired without a snap cap, as the pin can peen the chamber edge. If you only shoot rentals, you can still dry-fire-practice the grip, stance, and trigger motion at home with an inert training pistol or a SIRT-style trainer.</p>
+
+  <h3>Daily 15-Minute Routine</h3>
+
+  <h4>Block 1 — Stance & NPA (3 min)</h4>
+  <ul>
+    <li>Build your stance eyes-closed. Open eyes — sights on target? Adjust feet, not arms.</li>
+    <li>Repeat 5–10 times. Build the position automatically.</li>
+  </ul>
+
+  <h4>Block 2 — Pure Trigger Press (5 min)</h4>
+  <ul>
+    <li>Coin or empty casing balanced on the front sight.</li>
+    <li>Take aim, press the trigger. The coin should not fall.</li>
+    <li>Pistol: 10 single-action presses, then 10 double-action (DA is the harder skill — spend more time here).</li>
+  </ul>
+
+  <h4>Block 3 — Wall Drill (4 min)</h4>
+  <ul>
+    <li>Stand 3 feet from a blank wall. Aim at a single small mark.</li>
+    <li>Press the trigger while watching the front sight. It should not move when the hammer falls.</li>
+    <li>The simplest, most ruthless trigger-control diagnostic. Nowhere to hide.</li>
+  </ul>
+
+  <h4>Block 4 — Presentation / Bolt Cycle (3 min)</h4>
+  <ul>
+    <li>Pistol: low ready to sights on target, smoothly. A full-size steel pistol is heavier than a polymer one — practice with whatever you shoot most to build the muscle memory to hold it steady at extension.</li>
+    <li>Rifle: cycle the bolt without leaving cheek weld. Sights on target through the cycle. Five reps.</li>
+  </ul>
+
+  <h3>Weekly Variations</h3>
+  <ul>
+    <li>Once a week: dry-fire a full 10-shot bullseye string in real time. Call every shot.</li>
+    <li>Once a week: ball-and-dummy at the range with snap caps mixed in.</li>
+    <li>Once a week: weak-hand-only trigger press. Builds awareness of grip pressure.</li>
+  </ul>
+</section>
+
+<!-- ======================== 10 ======================== -->
+<section id="s10">
+  <div class="section-head">
+    <div class="id">§ 10</div>
+    <h2 class="section-title">Live-Fire Drills</h2>
+  </div>
+
+  <p>Every range session should have structure. Lane time is finite, ammunition is expensive, and unfocused shooting reinforces unfocused habits. Pick 2–3 drills per session, write down scores, compare to last week.</p>
+
+  <h3>Targets</h3>
+  <ul>
+    <li><strong>B-8 (NRA 25-yard pistol):</strong> the gold standard. 5.54" black, 8 ring ~8". Used in NRA Bullseye.</li>
+    <li><strong>NRA A-23:</strong> the 25-yard smallbore rifle target.</li>
+    <li><strong>Dot torture (free PDF):</strong> ten small circles, 50 rounds, structured multi-skill test.</li>
+    <li><strong>Plain bull / grid:</strong> for ammo testing, zero confirmation, group measurement.</li>
+  </ul>
+
+  <h3>Rifle Drills — .22 or carbine, 25 yards</h3>
+
+  <div class="drill">
+    <div class="drill-head"><span class="drill-code">D1</span><span class="drill-name">Five-Shot Group Builder</span></div>
+    <p>Standard precision drill. 5 shots, single aiming point, slow, full position and breath between each. Measure group size centre-to-centre of the two widest holes. <strong>Goal:</strong> under 1" at 25 yards with match ammo. Sub-half-inch is achievable with a good rifle, ammo, and shooter.</p>
+  </div>
+
+  <div class="drill">
+    <div class="drill-head"><span class="drill-code">D2</span><span class="drill-name">Cold-Bore Shot</span></div>
+    <p>First shot of the session, full deliberation, fresh aiming point. Mark where it lands. Track cold-bore shots over many sessions — for matches and hunting, the first shot from a cold, clean barrel is often the most important one.</p>
+  </div>
+
+  <div class="drill">
+    <div class="drill-head"><span class="drill-code">D3</span><span class="drill-name">NRA Smallbore 25-Yard Match Simulation</span></div>
+    <p>Two sighters, then 10 shots for record at an A-23. Score by ring value. Possible: 100. Solid sport shooter: 90+. Competitive: 95+ at 25 yards rested.</p>
+  </div>
+
+  <div class="drill">
+    <div class="drill-head"><span class="drill-code">D4</span><span class="drill-name">Standing Position</span></div>
+    <p>Once bench groups are under 1", stand up. Standing unsupported with a .22 bolt gun is humbling. At 25 yards, scoring 80+ on the A-23 standing is good. Olympic 10m air rifle and 50m smallbore are built on this position.</p>
+  </div>
+
+  <h3>Pistol Drills — any handgun, 7 to 25 yards</h3>
+
+  <div class="drill">
+    <div class="drill-head"><span class="drill-code">D5</span><span class="drill-name">Bill Drill — Modified for Revolver</span></div>
+    <p>Classic IDPA / USPSA drill: six shots into the A-zone (or 8-ring) at 7 yards, as fast as you can hit. Adapted for a six-shot revolver — a full cylinder. Start slow, every shot in the 8-ring. Build to a par of 4 seconds for six A-zone hits.</p>
+  </div>
+
+  <div class="drill">
+    <div class="drill-head"><span class="drill-code">D6</span><span class="drill-name">Slow Fire Bullseye (one-handed)</span></div>
+    <p>NRA Conventional Pistol slow-fire string: 10 shots in 10 minutes at a B-8, one-handed, single-action. At 25 yards with a service pistol or revolver, scoring 80 (eights and better) is a real benchmark; 90 is excellent.</p>
+  </div>
+
+  <div class="drill">
+    <div class="drill-head"><span class="drill-code">D7</span><span class="drill-name">Two-Handed Precision at 25 Yards</span></div>
+    <p>10 shots slow fire, two-handed, single-action, B-8. Target: group inside the 9 ring (under 6"). Most pistols are mechanically capable of much tighter — the shooter caps out before the gun does.</p>
+  </div>
+
+  <div class="drill">
+    <div class="drill-head"><span class="drill-code">D8</span><span class="drill-name">Double-Action Roll Drill</span></div>
+    <p>Cylinder loaded. All six shots double-action, deliberate, smooth. No cocking. 7 yards. <strong>Goal:</strong> all six inside the 8-ring. The hardest pure-trigger drill in the book. Trigger discipline must remain intact across all 12 lb of squeeze.</p>
+  </div>
+
+  <div class="drill">
+    <div class="drill-head"><span class="drill-code">D9</span><span class="drill-name">Strong-Hand-Only / Weak-Hand-Only</span></div>
+    <p>5 shots each at 7 yards on a B-8. Exposes weakness in grip-only stability. Most shooters lose 20–30 points dropping to one hand; the goal is to shrink that gap.</p>
+  </div>
+
+  <div class="drill">
+    <div class="drill-head"><span class="drill-code">D10</span><span class="drill-name">Dot Torture</span></div>
+    <p>50 rounds at 3–5 yards. A close indoor drill that works with any handgun. Different exercises on each of 10 dots. The classic "can you put 50 for 50?" benchmark. Start at 3 yards; move back as you clean it.</p>
+  </div>
+
+  <h3>75-Minute Session Template</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Time</th><th>Activity</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">00–10</td><td>Set up. Eye/ear pro. Confirm targets. Verify zero with 5 slow shots. Log cold-bore separately.</td></tr>
+        <tr><td class="mono">10–25</td><td>Fundamentals — one drill, focused. E.g. 25 deliberate shots on a B-8, slow fire, calling every shot.</td></tr>
+        <tr><td class="mono">25–45</td><td>Diagnostic / weak skill — ball-and-dummy if anticipation is creeping in; DA-only if revolver DA needs work; standing rifle if you have been benching too long.</td></tr>
+        <tr><td class="mono">45–60</td><td>Performance drill — Dot Torture, Bill Drill, scored bullseye string. Record the result.</td></tr>
+        <tr><td class="mono">60–70</td><td>Cool-down — 10 slow, perfect shots. End on a clean target, never a frustrated one.</td></tr>
+        <tr><td class="mono">70–75</td><td>Pack up. Notes in scorebook. Lead-removal wipes before touching anything you take home.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ======================== 11 ======================== -->
+<section id="s11">
+  <div class="section-head">
+    <div class="id">§ 11</div>
+    <h2 class="section-title">The 12-Week Plan</h2>
+  </div>
+
+  <p>Assumes one range visit per week and 15 minutes of dry-fire 4–5 days per week. Total round count is roughly 600 .22 LR and 600 9mm over the cycle — modest, intentional, trackable.</p>
+
+  <div class="week-list">
+    <div class="week"><div class="wnum">01</div><div class="wbody"><div class="focus">Baseline</div><div class="detail"><strong>Range:</strong> Zero both firearms. Record cold-bore. 5-shot groups at 25 yd, both guns. Bullseye string for score. <strong>Dry:</strong> Stance and NPA. Coin drill. Wall drill.</div></div></div>
+    <div class="week"><div class="wnum">02</div><div class="wbody"><div class="focus">Rifle fundamentals</div><div class="detail"><strong>Range:</strong> Five 5-shot groups, .22, bench. Measure all. Plus 10 standing shots if time. <strong>Dry:</strong> Bolt cycle without lifting head. Trigger press.</div></div></div>
+    <div class="week"><div class="wnum">03</div><div class="wbody"><div class="focus">Pistol grip</div><div class="detail"><strong>Range:</strong> Grip diagnostic — 25 shots, two-handed, 7 yd, focus on 60/40 pressure. <strong>Dry:</strong> Grip-only with an empty/inert pistol. Build it 20 times per session.</div></div></div>
+    <div class="week"><div class="wnum">04</div><div class="wbody"><div class="focus">Trigger control</div><div class="detail"><strong>Range:</strong> Ball-and-dummy with your pistol. Then 10-shot B-8 string at 15 yd two-handed. <strong>Dry:</strong> Wall drill, pistol. 50 perfect dry reps.</div></div></div>
+    <div class="week"><div class="wnum">05</div><div class="wbody"><div class="focus">Sights</div><div class="detail"><strong>Range:</strong> Dry-fire warmup. 5-shot rifle group. 10-shot pistol B-8 at 25 yd two-handed. <strong>Dry:</strong> Front-sight focus on small target across the room.</div></div></div>
+    <div class="week"><div class="wnum">06</div><div class="wbody"><div class="focus">Mid-cycle test</div><div class="detail"><strong>Range:</strong> NRA Smallbore A-23 simulation. NRA Bullseye slow-fire pistol string at 25 yd. Record scores. <strong>Dry:</strong> Short sessions. Reflect on weakest fundamental.</div></div></div>
+    <div class="week"><div class="wnum">07</div><div class="wbody"><div class="focus">Revolver DA</div><div class="detail"><strong>Range:</strong> Double-Action Roll Drill. 30 rounds DA at 7 yd. Then 10 SA shots. <strong>Dry:</strong> DA dry-fire only. 50 perfect DA presses per day.</div></div></div>
+    <div class="week"><div class="wnum">08</div><div class="wbody"><div class="focus">One-handed</div><div class="detail"><strong>Range:</strong> Bullseye one-handed at 25 yd, both firearms. Be honest — expect lower scores. <strong>Dry:</strong> One-handed coin drill. One-handed wall drill.</div></div></div>
+    <div class="week"><div class="wnum">09</div><div class="wbody"><div class="focus">Standing rifle</div><div class="detail"><strong>Range:</strong> Standing rifle, .22, 25 yd. 20 shots scored on A-23. Compare to bench.</div></div></div>
+    <div class="week"><div class="wnum">10</div><div class="wbody"><div class="focus">Speed under control</div><div class="detail"><strong>Range:</strong> Bill Drill modified — six shots, 7 yd. Slow first; build to par 5 sec. <strong>Dry:</strong> Presentation reps from low ready.</div></div></div>
+    <div class="week"><div class="wnum">11</div><div class="wbody"><div class="focus">Dot Torture</div><div class="detail"><strong>Range:</strong> 50-round Dot Torture at 3 yd, then 5 yd, with your pistol. <strong>Dry:</strong> Maintenance — keep the streak.</div></div></div>
+    <div class="week"><div class="wnum">12</div><div class="wbody"><div class="focus">Final test</div><div class="detail"><strong>Range:</strong> Re-run Week 1 protocol exactly. Score, measure, compare. Identify top 2 weaknesses for the next cycle. <strong>Dry:</strong> Light — taper like a sport athlete before a meet.</div></div></div>
+  </div>
+
+  <p>After 12 weeks, do not start over. Identify the two weakest skills from the post-test and design a new 8–12 week block around them. Skill development is cyclic, not linear.</p>
+</section>
+
+<!-- ======================== 12 ======================== -->
+<section id="s12">
+  <div class="section-head">
+    <div class="id">§ 12</div>
+    <h2 class="section-title">Range Day & Etiquette</h2>
+  </div>
+
+  <p>Target Sports Canada is a 25-yard indoor commercial range in Gormley, north of Toronto, with lane-based shooting and a rental case. These notes apply there and at most indoor ranges — adjust to your venue's posted rules:</p>
+
+  <h3>Before You Leave Home</h3>
+  <p><strong>If you are renting:</strong> bring photo ID and check the range's age, ID, and "must shoot with a companion" policies in advance. No licence is needed to shoot rentals under range supervision at most venues. That is the whole list.</p>
+  <p><strong>If you own and are bringing your own:</strong></p>
+  <ul>
+    <li>Confirm your ATT covers the destination range (it must be listed).</li>
+    <li>Cased and locked for transport. Trigger lock on restricted firearms in addition to the case lock.</li>
+    <li>Ammunition in original packaging or labelled.</li>
+    <li>PAL/RPAL physically on you, not in the gun case.</li>
+    <li>Direct route from home → range → home. The ATT restricts you to that route.</li>
+  </ul>
+
+  <h3>Booking & Timing</h3>
+  <ul>
+    <li>Weekends and weekday evenings are busiest. Off-peak (Tuesday or Wednesday morning) gives a quieter range and more deliberate shooting. Beginner/rental packages and lanes book up fast — reserve ahead.</li>
+    <li>Plan minimum 90 minutes door-to-door. Less than an hour at the lane is hard to use well.</li>
+    <li>Booking blocks are typically 1 hour — book a double if you can, especially for rifle work that requires longer pacing between shots.</li>
+  </ul>
+
+  <h3>At the Lane</h3>
+  <ul>
+    <li>Uncase only at the firing line, muzzle downrange. Hard range rule and a sensible habit.</li>
+    <li>Lane lighting is uneven. Bring high-contrast targets if the printed ones wash out.</li>
+    <li>Test the target carrier before unloading your bag. Some have a reputation for sticking or running slow.</li>
+    <li><strong>Revolver shooters:</strong> never let anyone stand close to your support side — the cylinder gap vents gas sideways. Semi-auto shooters: mind your ejection arc so you are not pelting your neighbour with hot brass.</li>
+    <li>Police your brass — even revolver casings — and keep your bay tidy.</li>
+  </ul>
+
+  <h3>Afterward</h3>
+  <ul>
+    <li>Lead-removal hand wipes before phone, keys, or anything you take home.</li>
+    <li>Range bag in the trunk, not the seat. Change shoes when you get home if you can.</li>
+    <li>If you own the firearm, clean it within 24 hours. Revolver cylinders and forcing cones collect carbon quickly; rimfire chambers and bolt faces accumulate wax and lead; semi-autos like a wipe-down and light lube on the rails.</li>
+  </ul>
+</section>
+
+<!-- ======================== 13 ======================== -->
+<section id="s13">
+  <div class="section-head">
+    <div class="id">§ 13</div>
+    <h2 class="section-title">Scorebook & Metrics</h2>
+  </div>
+
+  <p>A session without recorded results is a session that cannot improve you. Keep a simple notebook — paper, app, or spreadsheet. Capture:</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Field</th><th>What to Capture</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">Date / range</td><td>Date, time, range — useful for spotting patterns.</td></tr>
+        <tr><td class="mono">Firearm</td><td>Make, model, calibre, action type — and whether owned or rented.</td></tr>
+        <tr><td class="mono">Ammo</td><td>Make, model, weight, lot if you can read it.</td></tr>
+        <tr><td class="mono">Distance</td><td>25 yd unless otherwise.</td></tr>
+        <tr><td class="mono">Drill</td><td>Which one — D1–D10 or your own.</td></tr>
+        <tr><td class="mono">Score / group</td><td>B-8 score, group in inches, par time if timed.</td></tr>
+        <tr><td class="mono">Conditions</td><td>Lighting, alertness, last meal, sleep.</td></tr>
+        <tr><td class="mono">Calls vs. hits</td><td>Did your shot calls match where the holes landed?</td></tr>
+        <tr><td class="mono">Top weakness</td><td>One sentence. Honest.</td></tr>
+        <tr><td class="mono">Next session</td><td>One commitment.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Benchmarks Worth Chasing</h3>
+
+  <div class="bench-row head">
+    <div class="cell">Drill</div>
+    <div class="cell">Novice</div>
+    <div class="cell">Intermediate</div>
+    <div class="cell">Advanced</div>
+  </div>
+  <div class="bench-row">
+    <div class="cell">.22 rifle — 5-shot group, 25 yd, bench</div>
+    <div class="cell metric novice">2.0"</div>
+    <div class="cell metric inter">1.0"</div>
+    <div class="cell metric adv">0.5"</div>
+  </div>
+  <div class="bench-row">
+    <div class="cell">.22 rifle — A-23 25-yd score (rested)</div>
+    <div class="cell metric novice">85</div>
+    <div class="cell metric inter">92</div>
+    <div class="cell metric adv">97</div>
+  </div>
+  <div class="bench-row">
+    <div class="cell">Pistol — B-8 25 yd, two-handed slow</div>
+    <div class="cell metric novice">60</div>
+    <div class="cell metric inter">80</div>
+    <div class="cell metric adv">92</div>
+  </div>
+  <div class="bench-row">
+    <div class="cell">Pistol — B-8 25 yd, one-handed slow</div>
+    <div class="cell metric novice">50</div>
+    <div class="cell metric inter">70</div>
+    <div class="cell metric adv">85</div>
+  </div>
+  <div class="bench-row">
+    <div class="cell">Bill Drill (six A-hits, 7 yd)</div>
+    <div class="cell metric novice">8s</div>
+    <div class="cell metric inter">5s</div>
+    <div class="cell metric adv">3.5s</div>
+  </div>
+  <div class="bench-row">
+    <div class="cell">Dot Torture (3 yd, 50-round)</div>
+    <div class="cell metric novice">≥40</div>
+    <div class="cell metric inter">≥48</div>
+    <div class="cell metric adv">50/50 @ 5yd</div>
+  </div>
+
+  <p style="margin-top:20px;">These are loose targets, not absolute standards. Use them to know roughly where you are and where you are heading.</p>
+</section>
+
+<!-- ======================== 14 ======================== -->
+<section id="s14">
+  <div class="section-head">
+    <div class="id">§ 14</div>
+    <h2 class="section-title">Mental Game</h2>
+  </div>
+
+  <p>Once fundamentals are reliable, scoring is decided in the head. Bullseye shooters say it is 90% mental at the top level. These skills are practiced, not innate.</p>
+
+  <h3>The Shot Process as a Routine</h3>
+  <p>Every shot follows the same internal sequence. Build it in dry-fire until it runs without conscious effort:</p>
+  <ol>
+    <li>Settle into stance. Breathe.</li>
+    <li>Grip and mount.</li>
+    <li>Find natural point of aim.</li>
+    <li>Sight focus — front sight sharp.</li>
+    <li>Begin trigger press.</li>
+    <li>Break. Follow through. Call the shot.</li>
+    <li>Reset.</li>
+  </ol>
+  <p>A bad shot interrupts the routine — abort and restart. A great shot completes it — trust it and reset. The routine is the same either way. Outcomes do not change the process.</p>
+
+  <h3>Dealing with a Bad Shot</h3>
+  <ol>
+    <li>Finish follow-through anyway.</li>
+    <li>Make no immediate change — no equipment fiddling, no stance adjustment, no "try harder" muscle tension.</li>
+    <li>Acknowledge the call, set down the firearm if needed, take three breaths, restart the routine.</li>
+  </ol>
+  <p>Bad shots compound when shooters chase them; good shooters move on.</p>
+
+  <h3>Pressure</h3>
+  <p>If you intend to compete (Conventional Pistol, IPSC, smallbore matches at Ontario clubs), match performance is reliably worse than practice performance for the first several matches. This is normal.</p>
+  <ul>
+    <li>Make practice harder than match conditions — tighter par times, lower allowed scores, more pressure on every drill.</li>
+    <li>Shoot the conditions, not the score. Stay in the routine. The scoresheet is read at the end, not during.</li>
+    <li>Eat, hydrate, sleep. Match-day fundamentals start the night before.</li>
+  </ul>
+</section>
+
+<!-- ======================== 15 ======================== -->
+<section id="s15">
+  <div class="section-head">
+    <div class="id">§ 15</div>
+    <h2 class="section-title">Ontario Legal Refresher</h2>
+  </div>
+
+  <div class="callout warn">
+    <div class="tag">▸ Not Legal Advice</div>
+    <p>This is a working refresher, not a substitute for the Canadian Firearms Safety Course (CFSC) or Canadian Restricted Firearms Safety Course (CRFSC), and not legal advice. The federal Firearms Act, the Criminal Code, and the conditions of your specific licence and ATT govern your conduct. When in doubt, the Chief Firearms Officer's office is the right call.</p>
+  </div>
+
+  <h3>Licensing</h3>
+  <ul>
+    <li>A typical <strong>non-restricted firearm</strong> (most rifles and shotguns, e.g. a .22 bolt-action or a hunting rifle) requires a Possession and Acquisition Licence (PAL).</li>
+    <li>A <strong>restricted firearm</strong> (handguns and some rifles) requires a Restricted PAL (RPAL) and registration.</li>
+    <li>PAL and RPAL must be valid and unexpired. Carry them any time you are transporting or using firearms.</li>
+  </ul>
+
+  <h3>Transport</h3>
+  <ul>
+    <li><strong>Non-restricted:</strong> unloaded, cased recommended, ammunition separate is best practice. Trigger lock is best practice though not strictly required for non-restricted in transit.</li>
+    <li><strong>Restricted (handguns):</strong> unloaded, with a trigger lock, in a locked, opaque, sturdy case, with a valid ATT that lists the destination range.</li>
+    <li>ATTs are issued by the provincial CFO. In Ontario, an ATT is typically attached to the RPAL for transport to approved ranges and gunsmiths.</li>
+    <li>Direct route only. No unnecessary stops between home and the range.</li>
+  </ul>
+
+  <h3>Storage at Home</h3>
+  <ul>
+    <li><strong>Non-restricted:</strong> unloaded, with a trigger or cable lock OR in a locked container, OR with the bolt removed. Ammunition with the firearm is permitted but separate is best practice.</li>
+    <li><strong>Restricted:</strong> unloaded, trigger or cable lock, AND in a locked container (typically a safe). Ammunition separate is best practice.</li>
+    <li>Both: out of reach of anyone without lawful access.</li>
+  </ul>
+
+  <h3>The Four Universal Rules</h3>
+  <ol>
+    <li>Treat every firearm as if it is loaded. Always.</li>
+    <li>Never point the muzzle at anything you are not willing to destroy.</li>
+    <li>Keep your finger off the trigger until your sights are on target and you have decided to fire.</li>
+    <li>Be sure of your target and what is beyond it.</li>
+  </ol>
+  <p>Range rules add a fifth in practice: only handle firearms at the firing line, muzzle downrange, when the range is hot.</p>
+</section>
+
+<!-- ======================== 16 ======================== -->
+<section id="s16">
+  <div class="section-head">
+    <div class="id">§ 16</div>
+    <h2 class="section-title">Ranges Near Toronto & Going Further</h2>
+  </div>
+
+  <h3>Disciplines Worth Exploring</h3>
+  <ul>
+    <li><strong>NRA Conventional Pistol (Bullseye):</strong> one-handed slow, timed, and rapid fire on B-6/B-8 at 25 and 50 yards. Built for revolvers and target pistols. Slow, precise, mentally demanding.</li>
+    <li><strong>IDPA / IPSC / USPSA:</strong> practical pistol competition — movement, draw, multiple targets, on the clock. Divisions exist for striker pistols, single-action, and revolvers. Many Ontario clubs run weekly or monthly matches.</li>
+    <li><strong>ICORE:</strong> revolver-specific practical matches, if the wheelgun is your thing.</li>
+    <li><strong>Smallbore Rifle (3-position or prone):</strong> the Olympic discipline. Iron sights, .22 LR, at 25 or 50 metres. A target rifle needs a peep sight and sling to compete formally, but the fundamentals are identical to anything you learn here.</li>
+    <li><strong>Air rifle / air pistol (10 m):</strong> the other Olympic disciplines — and the cheapest, quietest way to shoot almost daily, even at home with a pellet trap.</li>
+    <li><strong>PRS Rimfire:</strong> Precision Rifle Series rimfire matches are growing in Ontario. A bolt-action .22 at varied distances and positions fits the entry level perfectly.</li>
+    <li><strong>Trap / Skeet / Sporting Clays:</strong> shotgun clay sports — a completely different, highly social discipline if you want to shoot moving targets outdoors.</li>
+    <li><strong>F-Class / full-bore rifle:</strong> long-range precision out to 300–900 m at outdoor clubs, once you have the fundamentals and a centrefire rifle.</li>
+  </ul>
+
+  <h3>Indoor Ranges with Rentals — GTA & Around</h3>
+  <p>A diverse, non-exhaustive sampling of popular indoor venues. Hours, rental policies, and stock change constantly — confirm by phone before you go, and assume you must buy the range's ammo for rentals.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Range</th><th>Area</th><th>Known For</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">Target Sports Canada</td><td>Gormley</td><td>20 pistol lanes to 25 m; pistols, carbines, shotguns; broad rental case; beginner packages; coaching.</td></tr>
+        <tr><td class="mono">The Range @ Urban Tactical</td><td>GTA</td><td>Themed shooting packages with varied arsenals — pistols, rifles, shotguns.</td></tr>
+        <tr><td class="mono">GTA Firearms Academy</td><td>Etobicoke</td><td>Strong on CFSC/CRFSC licensing courses and structured beginner instruction.</td></tr>
+        <tr><td class="mono">Maple Leaf Revolver Club</td><td>Toronto</td><td>Established Toronto indoor club; pistol-focused.</td></tr>
+        <tr><td class="mono">Easthill Outdoors (indoor)</td><td>GTA region</td><td>25-yd indoor rated for all pistol and most rifle calibres; tiered membership.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Member Clubs (mostly outdoor, broader disciplines)</h3>
+  <p>A membership-based club opens disciplines a commercial range cannot host — long-range rifle, clay sports, action pistol bays. Notable in southern Ontario:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Club</th><th>Area</th><th>Disciplines</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">Silverdale Gun Club</td><td>Niagara</td><td>Ranges out to 183 m, archery, even knife-throwing; rifle + shotgun packages; non-members welcome.</td></tr>
+        <tr><td class="mono">Sharon Gun Club</td><td>Oak Ridges Moraine</td><td>IPSC, ICORE, F-Class, Trap, ISSF Bullseye — very broad.</td></tr>
+        <tr><td class="mono">Pineridge Target Sports Club</td><td>Newcastle</td><td>Smallbore, full-bore, indoor and outdoor.</td></tr>
+        <tr><td class="mono">Caledon Fish & Game Club</td><td>Caledon</td><td>Broad recreational disciplines.</td></tr>
+        <tr><td class="mono">Hamilton Angling & Hunting Assoc.</td><td>Hamilton</td><td>Long-established, broad disciplines.</td></tr>
+        <tr><td class="mono">Toronto Int'l Trap & Skeet Club</td><td>Innisfil</td><td>Pan Am Games shooting venue; 25/50 m, 10 m air, trap and skeet.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Most clubs require a probationary period, club orientation, and a current PAL/RPAL. Waiting lists at popular clubs can run into years — apply early. For match schedules, check IDPA Canada, IPSC Ontario, and the Ontario Handgun Association.</p>
+
+  <h3>No Licence Yet? Airgun & Replica Venues</h3>
+  <ul>
+    <li><strong>Longshots Shooting &amp; Social</strong> — replica airgun lanes in a controlled, all-ages environment; no licence or experience needed.</li>
+    <li><strong>Pew Pew Toronto</strong> — airsoft target practice and courses; coaching for beginners.</li>
+  </ul>
+  <p>These are a legitimate, low-commitment way to build trigger and sight fundamentals before stepping up to live fire.</p>
+
+  <h3>Coaching & Books</h3>
+  <ul>
+    <li>Most rental ranges (including TSC) offer paid coaching. One hour with an experienced coach can correct issues that 100 hours of self-practice will only reinforce.</li>
+    <li>Shooting Federation of Canada (SFC) certifies coaches across Olympic shooting disciplines.</li>
+    <li>The Dominion of Canada Rifle Association (DCRA) and the Ontario Rifle Association run clinics, especially for smallbore and full-bore rifle.</li>
+    <li><strong>Books:</strong> Brian Enos, <em>Practical Shooting: Beyond Fundamentals</em> (pistol). Bill Pullum &amp; Frank Hanenkrat, <em>Position Rifle Shooting</em> (rifle, classic).</li>
+  </ul>
+
+  <div class="crosshair">+&nbsp;+&nbsp;+</div>
+
+  <div class="callout key">
+    <div class="tag">▸ Final Note</div>
+    <p>Shooting well is one of the most honest sports in existence. The paper does not lie, the timer does not lie, and the scorebook does not flatter. Improvement is slow and the gains are real. Practice with intention, track everything, dry-fire daily, and the holes will move toward the centre.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="sig">// END OF DOCUMENT</div>
+  <div>Indoor Marksmanship Improvement Guide · For personal training use</div>
+</footer>
+
+</div>
+
+<script>
+  // Active section in TOC on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const tocLinks = document.querySelectorAll('nav.toc a');
+  const map = {};
+  tocLinks.forEach(a => map[a.getAttribute('href').slice(1)] = a.parentElement);
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        Object.values(map).forEach(li => li.style.color = '');
+        if (map[e.target.id]) map[e.target.id].style.color = 'var(--accent)';
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>

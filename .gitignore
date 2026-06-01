@@ -10,6 +10,7 @@ venv/
 
 # Marksman runtime data & scratch output
 marksman_data.json
+recreations/
 demo_output.txt
 test_results.txt
 *.tmp

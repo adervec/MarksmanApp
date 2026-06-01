@@ -24,6 +24,7 @@ Examples
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import uuid
 from typing import List, Optional, Tuple
@@ -34,6 +35,9 @@ from . import targets as targets_mod
 from .storage import Database, DEFAULT_DB_PATH
 from . import tracker
 from . import report
+from . import render as render_mod
+from . import theme as theme_mod
+from .theme import Painter
 
 
 # --------------------------------------------------------------------------- #
@@ -77,6 +81,22 @@ def _new_session_id(date: str) -> str:
     return "%s-%s" % (date, uuid.uuid4().hex[:6])
 
 
+def _make_painter(args: argparse.Namespace, db: Database,
+                  force: bool = False) -> Painter:
+    """Build the active skin's painter for this invocation.
+
+    Resolution order for the skin: ``--theme`` flag, then the persisted
+    preference, then the plain ``mono`` default.  Colour is emitted only when
+    the destination supports it (a TTY, ``NO_COLOR`` unset, not ``--no-color``);
+    ``force`` is used by ``theme`` preview/list so swatches still render.
+    """
+    key = getattr(args, "theme", None) or db.settings.get("theme")
+    th = theme_mod.get_theme(key)
+    enabled = theme_mod.color_enabled(
+        sys.stdout, no_color=getattr(args, "no_color", False), force=force)
+    return Painter(th, enabled)
+
+
 # --------------------------------------------------------------------------- #
 # Commands
 # --------------------------------------------------------------------------- #
@@ -101,34 +121,41 @@ def cmd_weapon_add(args: argparse.Namespace) -> int:
 
 def cmd_weapon_list(args: argparse.Namespace) -> int:
     db = Database.load(args.db)
+    p = _make_painter(args, db)
     if not db.weapons:
         print("No weapons yet. Add one with: marksman weapon add --name ...")
         return 0
-    print("%-12s %-28s %-18s %-10s SESSIONS" % ("ID", "NAME", "CATEGORY", "CALIBER"))
+    print(p.title("%-12s %-28s %-18s %-10s SESSIONS"
+                  % ("ID", "NAME", "CATEGORY", "CALIBER")))
     for w in sorted(db.weapons.values(), key=lambda x: x.name.lower()):
         n = len(db.sessions_for_weapon(w.id))
-        print("%-12s %-28s %-18s %-10s %d" % (w.id, w.name, w.category, w.caliber, n))
+        print(p.value("%-12s" % w.id) + " " + p.label("%-28s" % w.name)
+              + " " + p.muted("%-18s %-10s" % (w.category, w.caliber))
+              + " " + p.value("%d" % n))
     return 0
 
 
 def cmd_targets(args: argparse.Namespace) -> int:
     db = Database.load(args.db)
+    p = _make_painter(args, db)
     names = set(targets_mod.list_targets()) | set(t.name for t in db.custom_targets.values())
-    print("Available targets:")
+    print(p.title("Available targets:"))
     for name in sorted(names):
         try:
             spec = resolve_target(name, db)
         except KeyError:
             continue
         deci = " (decimal)" if spec.decimal_scoring else ""
-        print("  %s%s: 10-ring %.1f mm, outer %.0f mm, max %d"
-              % (spec.name, deci, spec.ten_ring_radius_mm * 2,
-                 spec.outer_radius_mm * 2, spec.max_value))
+        print("  " + p.label("%s%s" % (spec.name, deci)) + p.muted(": ")
+              + p.muted("10-ring ") + p.value("%.1f" % (spec.ten_ring_radius_mm * 2))
+              + p.muted(" mm, outer ") + p.value("%.0f" % (spec.outer_radius_mm * 2))
+              + p.muted(" mm, max ") + p.value("%d" % spec.max_value))
     return 0
 
 
 def cmd_analyze(args: argparse.Namespace) -> int:
     db = Database.load(args.db)
+    p = _make_painter(args, db)
 
     weapon = db.find_weapon(args.weapon)
     if weapon is None:
@@ -211,25 +238,30 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         target_name=target.name if target else "",
         ammo=args.ammo or "",
         image_path=image_path,
+        video_path=args.video or "",
         notes=args.notes or "",
     )
 
-    print("Weapon : %s [%s]" % (weapon.name, weapon.category))
-    print(detection_note)
+    print(p.label("Weapon : ") + p.value(weapon.name)
+          + p.muted(" [%s]" % weapon.category))
+    print(p.muted(detection_note))
     print()
-    print(report.format_group_stats(stats, session.target_name, args.distance))
+    print(report.format_group_stats(stats, session.target_name, args.distance,
+                                    painter=p))
 
     if not args.no_save:
         db.add_session(session)
         db.save()
         print()
-        print("Saved session %s (%d for this weapon)."
-              % (session.id, len(db.sessions_for_weapon(weapon.id))))
+        print(p.good("Saved session ") + p.value(session.id)
+              + p.muted(" (%d for this weapon)."
+                        % len(db.sessions_for_weapon(weapon.id))))
     return 0
 
 
 def cmd_progress(args: argparse.Namespace) -> int:
     db = Database.load(args.db)
+    p = _make_painter(args, db)
     sessions = db.all_sessions()
     if not sessions:
         print("No sessions yet. Analyse a target with 'marksman analyze'.")
@@ -242,48 +274,305 @@ def cmd_progress(args: argparse.Namespace) -> int:
             return 2
         rep = tracker.build_report(
             db.sessions_for_weapon(weapon.id), "weapon", weapon.name)
-        print(report.format_progress(rep, show_sessions=args.sessions))
+        print(report.format_progress(rep, show_sessions=args.sessions, painter=p))
         return 0
 
     if args.category:
         rep = tracker.build_report(
             db.sessions_for_category(args.category), "category", args.category)
-        print(report.format_progress(rep, show_sessions=args.sessions))
+        print(report.format_progress(rep, show_sessions=args.sessions, painter=p))
         return 0
 
     show_overall = args.all or not (args.by_category or args.by_weapon)
 
     if show_overall:
         rep = tracker.progress_overall(sessions)
-        print(report.format_progress(rep, show_sessions=args.sessions))
+        print(report.format_progress(rep, show_sessions=args.sessions, painter=p))
 
     if args.by_category or args.all:
         for rep in tracker.progress_by_category(sessions, db.weapons).values():
             print()
-            print(report.format_progress(rep, show_sessions=args.sessions))
+            print(report.format_progress(rep, show_sessions=args.sessions, painter=p))
 
     if args.by_weapon or args.all:
         for rep in tracker.progress_by_weapon(sessions, db.weapons).values():
             print()
-            print(report.format_progress(rep, show_sessions=args.sessions))
+            print(report.format_progress(rep, show_sessions=args.sessions, painter=p))
     return 0
 
 
 def cmd_sessions(args: argparse.Namespace) -> int:
     db = Database.load(args.db)
+    p = _make_painter(args, db)
     sessions = sorted(db.all_sessions(), key=lambda s: (s.date, s.id))
     if not sessions:
         print("No sessions yet.")
         return 0
-    print("%-12s %-22s %-24s %5s %8s %8s"
-          % ("DATE", "WEAPON", "TARGET", "SHOTS", "ES(mm)", "SCORE"))
+    print(p.title("%-12s %-22s %-24s %5s %8s %8s"
+                  % ("DATE", "WEAPON", "TARGET", "SHOTS", "ES(mm)", "SCORE")))
     for s in sessions:
         w = db.get_weapon(s.weapon_id)
         wname = w.name if w else s.weapon_id
         es = ("%.1f" % s.stats.extreme_spread_mm) if s.stats else "-"
         score = ("%.0f" % s.stats.total_score) if (s.stats and s.stats.total_score is not None) else "-"
-        print("%-12s %-22.22s %-24.24s %5d %8s %8s"
-              % (s.date, wname, s.target_name, len(s.shots), es, score))
+        print(p.value("%-12s" % s.date) + " " + p.label("%-22.22s" % wname)
+              + " " + p.muted("%-24.24s" % s.target_name)
+              + " " + p.value("%5d" % len(s.shots))
+              + " " + p.value("%8s" % es) + " " + p.value("%8s" % score))
+    return 0
+
+
+# --------------------------------------------------------------------------- #
+# Skins / themes
+# --------------------------------------------------------------------------- #
+
+def cmd_theme(args: argparse.Namespace) -> int:
+    """Dispatch ``theme`` with no sub-action to the listing."""
+    action = getattr(args, "theme_action", None)
+    if action == "set":
+        return cmd_theme_set(args)
+    if action == "preview":
+        return cmd_theme_preview(args)
+    return cmd_theme_list(args)
+
+
+def cmd_theme_list(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    current = db.settings.get("theme") or theme_mod.DEFAULT_THEME
+    enabled = theme_mod.color_enabled(
+        sys.stdout, no_color=getattr(args, "no_color", False))
+    head = _make_painter(args, db)
+    print(head.title("Marksman skins")
+          + head.muted("  (inspired by the best-selling console shooters)"))
+    print()
+    demo = [9.0, 8.0, 8.0, 6.0, 5.0, 4.0, 4.0, 3.0]
+    for th in theme_mod.list_themes():
+        pt = Painter(th, enabled)
+        mark = "  * " if th.key == current else "    "
+        swatch = (pt.accent(report.sparkline(demo, pt.spark_ramp)) + "  "
+                  + pt.good("good") + pt.muted("/") + pt.bad("bad"))
+        print(head.accent(mark) + pt.title("%-11s" % th.key)
+              + " " + swatch + "  " + pt.muted(th.inspired_by))
+    print()
+    print(head.muted("Set one with:  ") + head.value("marksman theme set <name>")
+          + head.muted("   preview:  ") + head.value("marksman theme preview <name>"))
+    print(head.muted("Active skin: ") + head.value(current))
+    return 0
+
+
+def cmd_theme_set(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    name = (args.name or "").strip().lower()
+    if not theme_mod.is_theme(name):
+        print("error: unknown skin %r. List them with 'marksman theme'."
+              % args.name, file=sys.stderr)
+        return 2
+    db.settings["theme"] = name
+    db.save()
+    th = theme_mod.get_theme(name)
+    enabled = theme_mod.color_enabled(
+        sys.stdout, no_color=getattr(args, "no_color", False), force=True)
+    p = Painter(th, enabled)
+    print(p.good("Skin set to ") + p.title(th.title)
+          + p.muted(" (%s)" % name))
+    print(p.muted(th.inspired_by))
+    return 0
+
+
+def cmd_theme_preview(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    name = (getattr(args, "name", None) or getattr(args, "theme", None)
+            or db.settings.get("theme") or theme_mod.DEFAULT_THEME)
+    if not theme_mod.is_theme(name):
+        print("error: unknown skin %r. List them with 'marksman theme'."
+              % name, file=sys.stderr)
+        return 2
+    th = theme_mod.get_theme(name)
+    enabled = theme_mod.color_enabled(
+        sys.stdout, no_color=getattr(args, "no_color", False), force=True)
+    p = Painter(th, enabled)
+    print(theme_mod.sample_report(p))
+    return 0
+
+
+# --------------------------------------------------------------------------- #
+# Media: recreations and cleanup
+# --------------------------------------------------------------------------- #
+
+def _session_target(session: Session, db: Database) -> Optional[TargetSpec]:
+    """Resolve a session's target spec by name, if it is still known."""
+    if not session.target_name:
+        return None
+    try:
+        return resolve_target(session.target_name, db)
+    except KeyError:
+        return None
+
+
+def _human_bytes(n: int) -> str:
+    size = float(n)
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if size < 1024.0 or unit == "TB":
+            return ("%d %s" % (int(size), unit) if unit == "B"
+                    else "%.1f %s" % (size, unit))
+        size /= 1024.0
+    return "%d B" % n
+
+
+def _file_size(path: str) -> int:
+    try:
+        return os.path.getsize(path)
+    except OSError:
+        return 0
+
+
+def _select_sessions(args: argparse.Namespace, db: Database) -> List[Session]:
+    """Sessions matching --weapon / --before / --session filters (date order)."""
+    sessions = db.all_sessions()
+    if getattr(args, "session", None):
+        sessions = [s for s in sessions if s.id == args.session]
+    if getattr(args, "weapon", None):
+        weapon = db.find_weapon(args.weapon)
+        if weapon is None:
+            return []
+        sessions = [s for s in sessions if s.weapon_id == weapon.id]
+    if getattr(args, "before", None):
+        sessions = [s for s in sessions if s.date < args.before]
+    return sorted(sessions, key=lambda s: (s.date, s.id))
+
+
+def _recreation_path(db: Database, session: Session) -> str:
+    return os.path.join(db.recreations_dir, "%s.png" % session.id)
+
+
+def _render_one(db: Database, session: Session, path: str) -> str:
+    weapon = db.get_weapon(session.weapon_id)
+    shot_r = (weapon.caliber_mm / 2.0) if (weapon and weapon.caliber_mm) else None
+    target = _session_target(session, db)
+    return render_mod.save_recreation(session, path, target=target,
+                                      shot_radius_mm=shot_r)
+
+
+def cmd_render(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    p = _make_painter(args, db)
+    sessions = _select_sessions(args, db)
+    if not sessions:
+        print("No matching sessions to render.")
+        return 0
+
+    out = args.out
+    # A path ending in .png (single session) writes that exact file; otherwise
+    # 'out' is treated as a directory of per-session PNGs.
+    single_file = bool(out) and out.lower().endswith(".png")
+    if single_file and len(sessions) > 1:
+        print("error: --out FILE.png needs exactly one session; got %d. "
+              "Pass a directory instead." % len(sessions), file=sys.stderr)
+        return 2
+
+    written = []
+    for s in sessions:
+        if single_file:
+            path = out
+        else:
+            path = os.path.join(out, "%s.png" % s.id) if out \
+                else _recreation_path(db, s)
+        try:
+            _render_one(db, s, path)
+        except Exception as e:
+            print(p.bad("error: could not render %s: %s" % (s.id, e)),
+                  file=sys.stderr)
+            continue
+        written.append((s, path))
+
+    for s, path in written:
+        print(p.good("Recreated ") + p.value(s.id)
+              + p.muted("  %d shots  -> " % len(s.shots)) + p.value(path))
+    print()
+    print(p.label("Rendered ") + p.value("%d" % len(written))
+          + p.label(" recreation(s)."))
+    return 0
+
+
+def cmd_cleanup(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    p = _make_painter(args, db)
+    sessions = _select_sessions(args, db)
+
+    # Only sessions that actually have source media on disk are candidates.
+    candidates = []   # (session, [(path, size), ...], total)
+    for s in sessions:
+        files = [(path, _file_size(path)) for path in s.source_media_paths
+                 if os.path.isfile(path)]
+        if files:
+            candidates.append((s, files, sum(sz for _, sz in files)))
+
+    if not candidates:
+        print("Nothing to clean up: no stored source media found"
+              + (" for that filter." if (args.weapon or args.before
+                                         or args.session) else "."))
+        return 0
+
+    total = sum(t for _, _, t in candidates)
+    recreate = not args.no_recreate
+
+    print(p.title("Cleanup %s" % ("(applying)" if args.apply else "(dry run)")))
+    print(p.rule(p.rule_char * 18))
+    for s, files, sub in candidates:
+        w = db.get_weapon(s.weapon_id)
+        wname = w.name if w else s.weapon_id
+        print("  " + p.value(s.id) + p.muted("  %s  " % wname)
+              + p.label("%s" % _human_bytes(sub)))
+        for path, sz in files:
+            print("      " + p.muted("%-9s " % _human_bytes(sz)) + path)
+
+    if not args.apply:
+        print()
+        print(p.accent("Would free ") + p.value(_human_bytes(total))
+              + p.accent(" across ") + p.value("%d" % len(candidates))
+              + p.accent(" session(s)."))
+        if recreate:
+            print(p.muted("A recreation diagram will be saved for each before "
+                          "its media is deleted."))
+        print(p.muted("Re-run with ") + p.value("--apply")
+              + p.muted(" to delete. Shot data (and recreations) are kept."))
+        return 0
+
+    # --- apply ---------------------------------------------------------- #
+    freed = 0
+    cleaned = 0
+    recreated = 0
+    for s, files, _sub in candidates:
+        # Recreate FIRST so a failure never costs us the source.
+        if recreate and not s.recreation_path:
+            path = _recreation_path(db, s)
+            try:
+                _render_one(db, s, path)
+                s.recreation_path = path
+                recreated += 1
+            except Exception as e:
+                print(p.bad("warning: skipping %s (recreation failed: %s)"
+                            % (s.id, e)), file=sys.stderr)
+                continue
+        for path, sz in files:
+            try:
+                os.remove(path)
+                freed += sz
+            except OSError as e:
+                print(p.bad("warning: could not delete %s: %s" % (path, e)),
+                      file=sys.stderr)
+        s.image_path = ""
+        s.video_path = ""
+        s.media_cleaned = True
+        cleaned += 1
+
+    db.save()
+    print()
+    print(p.good("Freed ") + p.value(_human_bytes(freed))
+          + p.good(" from ") + p.value("%d" % cleaned) + p.good(" session(s)."))
+    if recreated:
+        print(p.label("Saved ") + p.value("%d" % recreated)
+              + p.label(" recreation(s) in ") + p.value(db.recreations_dir))
     return 0
 
 
@@ -299,6 +588,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--db", default=DEFAULT_DB_PATH,
                    help="database file (default: %s)" % DEFAULT_DB_PATH)
+    p.add_argument("--theme", help="skin for this run (overrides the saved one); "
+                                   "see 'marksman theme'")
+    p.add_argument("--no-color", action="store_true", dest="no_color",
+                   help="disable coloured output")
     sub = p.add_subparsers(dest="command")
     sub.required = True
 
@@ -337,6 +630,8 @@ def build_parser() -> argparse.ArgumentParser:
     # input
     ap.add_argument("--shots", help="manual shots 'x,y x,y' in mm from POA")
     ap.add_argument("--image", help="path to a marked-up target image (PNG)")
+    ap.add_argument("--video", help="path to a source video to attach (kept only "
+                                    "as a reference; cleared by 'cleanup')")
     # vision options
     ap.add_argument("--mode", choices=["marker", "holes"], default="marker")
     ap.add_argument("--color", default="red",
@@ -370,6 +665,42 @@ def build_parser() -> argparse.ArgumentParser:
     # sessions
     sp = sub.add_parser("sessions", help="list saved sessions")
     sp.set_defaults(func=cmd_sessions)
+
+    # render (graphical recreations from stored shot data)
+    rp = sub.add_parser("render",
+                        help="redraw target diagrams from stored shot data")
+    rp.add_argument("--weapon", help="only this weapon (id or name)")
+    rp.add_argument("--session", help="only this session id")
+    rp.add_argument("--before", help="only sessions before this ISO date")
+    rp.add_argument("--out", help="output PNG file (single session) or "
+                                  "directory (default: the recreations folder)")
+    rp.set_defaults(func=cmd_render)
+
+    # cleanup (delete bulky source media; keep recreatable results)
+    cp = sub.add_parser("cleanup",
+                        help="delete stored images/videos to save space "
+                             "(recreations are kept)")
+    cp.add_argument("--weapon", help="only this weapon (id or name)")
+    cp.add_argument("--session", help="only this session id")
+    cp.add_argument("--before", help="only sessions before this ISO date")
+    cp.add_argument("--apply", action="store_true",
+                    help="actually delete (default is a dry run)")
+    cp.add_argument("--no-recreate", action="store_true",
+                    help="do not save a recreation diagram before deleting")
+    cp.set_defaults(func=cmd_cleanup)
+
+    # theme (skins)
+    thp = sub.add_parser("theme", help="choose a visual skin for the reports")
+    thp.set_defaults(func=cmd_theme)
+    thsub = thp.add_subparsers(dest="theme_action")
+    ths = thsub.add_parser("set", help="save a skin as the default")
+    ths.add_argument("name", help="skin name (e.g. recon, inferno, orbital)")
+    ths.set_defaults(func=cmd_theme_set)
+    thv = thsub.add_parser("preview", help="preview a skin")
+    thv.add_argument("name", nargs="?", help="skin name (default: current)")
+    thv.set_defaults(func=cmd_theme_preview)
+    thl = thsub.add_parser("list", help="list all skins")
+    thl.set_defaults(func=cmd_theme_list)
 
     return p
 

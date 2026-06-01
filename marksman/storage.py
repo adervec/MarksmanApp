@@ -12,7 +12,7 @@ import json
 import os
 import tempfile
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from .models import Session, Weapon, TargetSpec
 
@@ -27,7 +27,21 @@ class Database:
     weapons: Dict[str, Weapon] = field(default_factory=dict)
     sessions: Dict[str, Session] = field(default_factory=dict)
     custom_targets: Dict[str, TargetSpec] = field(default_factory=dict)
+    # Small bag of user preferences (e.g. the chosen "skin"/theme).  Kept as a
+    # free-form dict so new preferences don't need a schema bump.
+    settings: Dict[str, Any] = field(default_factory=dict)
     path: str = DEFAULT_DB_PATH
+
+    # -- locations --------------------------------------------------------- #
+    @property
+    def recreations_dir(self) -> str:
+        """Where recreation diagrams live: a ``recreations/`` dir by the DB.
+
+        Keeping them beside the database (rather than next to the now-deleted
+        source media) means they survive cleanup and travel with the data.
+        """
+        return os.path.join(os.path.dirname(os.path.abspath(self.path)),
+                            "recreations")
 
     # -- weapons ----------------------------------------------------------- #
     def add_weapon(self, weapon: Weapon) -> None:
@@ -78,6 +92,7 @@ class Database:
             "weapons": [w.to_dict() for w in self.weapons.values()],
             "sessions": [s.to_dict() for s in self.sessions.values()],
             "custom_targets": [t.to_dict() for t in self.custom_targets.values()],
+            "settings": self.settings,
         }
 
     def save(self, path: Optional[str] = None) -> str:
@@ -110,6 +125,7 @@ class Database:
         for td in d.get("custom_targets", []):
             t = TargetSpec.from_dict(td)
             db.custom_targets[t.name.lower()] = t
+        db.settings = dict(d.get("settings", {}))
         return db
 
     @classmethod

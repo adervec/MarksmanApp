@@ -60,6 +60,15 @@ python -m marksman.cli progress --by-weapon
 python -m marksman.cli progress --weapon ap1 --sessions
 python -m marksman.cli sessions                 # list every saved target
 python -m marksman.cli targets                  # built-in target faces
+
+# 4) Pick a skin (see "Skins" below)
+python -m marksman.cli theme                    # list skins
+python -m marksman.cli theme preview inferno    # try one on
+python -m marksman.cli theme set recon          # make it the default
+
+# 5) Save space: recreate results as diagrams, then delete bulky source media
+python -m marksman.cli render --weapon ap1      # redraw from stored shots
+python -m marksman.cli cleanup --weapon ap1     # dry run (add --apply to delete)
 ```
 
 ## Analysing an image
@@ -76,6 +85,72 @@ each hole is the most reliable). Then:
   mm"` (two points a known distance apart), or `--face-width MM` (the image
   spans a target face that wide). If you pass a `--target`, its known face
   width is used as a fallback.
+
+## Skins
+
+The reports can wear a **skin** — a colour palette plus a little texture
+(sparkline ramp, rule character, marker glyph). The set is inspired by the
+*vibe* of the best-selling console first-person shooters since 2001, using
+original names and no game assets:
+
+| Skin | Vibe it nods to |
+|---|---|
+| `mono` | A clean printed score card — no colour (the default). |
+| `recon` | **Call of Duty: Modern Warfare** — night-vision phosphor & amber. |
+| `orbital` | **Halo** — UNSC blue HUD with Spartan green and holo-amber. |
+| `inferno` | **Doom** — molten blood-red and hellfire orange. |
+| `frontline` | **Battlefield** — steel-blue smoke cut with dog-tag orange. |
+| `lightfall` | **Destiny** — Guardian purple lit by golden Light. |
+| `pandora` | **Borderlands** — bold comic yellow with inky outlines. |
+| `dust` | **Counter-Strike** — desert sand versus counter-terrorist blue. |
+| `overdrive` | **Overwatch** — vibrant orange energy over bright cyan. |
+| `dropzone` | **Apex Legends** / battle royale — crimson on gunmetal slate. |
+| `tropic` | **Far Cry** — lush tropical teal under a sunset orange. |
+
+```bash
+marksman theme                    # list skins (current one marked)
+marksman theme preview orbital    # see a skin without committing
+marksman theme set inferno        # save it as your default
+marksman --theme dust progress    # use a skin for just this run
+marksman --no-color progress      # force plain output
+```
+
+Colour is emitted **only** to a real terminal. When output is piped or
+redirected, or when `NO_COLOR` is set, reports fall back to plain text
+automatically — so scripts and tests see stable, uncoloured output. On Windows,
+ANSI is enabled automatically (Windows Terminal, PowerShell, or modern
+`conhost`).
+
+## Recreations & cleaning up media
+
+Source photos and videos of your targets are bulky and pile up fast. Because
+every session stores the **shot coordinates** (mm from point of aim) and the
+**target** they were scored on, Marksman can always *redraw* a clean diagram of
+the result — the rings with your shots plotted on them — without the original
+media. So the source files can be deleted to save space while the visual
+result is preserved.
+
+```bash
+# Redraw a result from stored data (no source media needed)
+marksman render --session 2026-04-15        # -> recreations/2026-04-15.png
+marksman render --weapon ap1                # one PNG per session
+marksman render --session 2026-04-15 --out group.png
+
+# Reclaim space. Dry run first (shows what would be freed, deletes nothing):
+marksman cleanup --weapon ap1
+marksman cleanup --before 2026-01-01
+marksman cleanup --apply                    # saves a recreation, then deletes
+```
+
+`cleanup` is **dry-run by default**; it only deletes with `--apply`, and even
+then it renders a recreation diagram *first* (unless `--no-recreate`), so the
+picture of the result is never lost. The shot data is always kept, so a
+recreation can be regenerated at any time. Recreations live in a
+`recreations/` folder beside your database. A recreation is a small flat-colour
+PNG (a few KB) — far smaller than a photo.
+
+You can attach a source video to a session with `marksman analyze ... --video
+clip.mp4`; like the image, it is just referenced and is cleared by `cleanup`.
 
 ## Data
 
