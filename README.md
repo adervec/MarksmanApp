@@ -1,5 +1,7 @@
 # Marksman
 
+[![CI](https://github.com/adervec/MarksmanApp/actions/workflows/ci.yml/badge.svg)](https://github.com/adervec/MarksmanApp/actions/workflows/ci.yml)
+
 A progress tracker for shooting sports — pistol, rifle, shotgun, and airguns,
 indoor or outdoor. Its core feature **analyses a marked-up image of a target**
 (the groupings of your shots), turns it into precise marksmanship metrics, and
