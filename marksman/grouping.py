@@ -31,20 +31,20 @@ from .models import Shot, TargetSpec, GroupStats
 def score_shot(
     shot: Shot,
     target: TargetSpec,
-    caliber_mm: float = 0.0,
+    bb_mm: float = 0.0,
 ) -> float:
     """Score a single shot against a target face.
 
     A shot scores the value of the smallest ring whose zone it touches.  When
-    ``caliber_mm`` is given, the shot's *edge* is used (the classic "breaks the
-    line scores the higher value" rule): a shot counts for a ring if the bullet
-    hole's inner edge reaches into it.
+    ``bb_mm`` is given, the shot's *edge* is used (the classic "breaks the
+    line scores the higher value" rule): a shot counts for a ring if the BB's
+    inner edge reaches into it.
 
-    With ``decimal_scoring`` the score is interpolated to tenths the way ISSF
+    With ``decimal_scoring`` the score is interpolated to tenths the way
     precision targets are scored (e.g. 10.9 dead centre).
     """
     r = shot.radius_mm
-    edge = max(0.0, r - caliber_mm / 2.0)  # closest approach of the hole to centre
+    edge = max(0.0, r - bb_mm / 2.0)  # closest approach of the BB to centre
 
     if target.decimal_scoring:
         return _decimal_score(edge, target)
@@ -56,7 +56,7 @@ def score_shot(
 
 
 def _decimal_score(edge_mm: float, target: TargetSpec) -> float:
-    """ISSF-style tenth-ring scoring.
+    """Precision-style tenth-ring scoring.
 
     Inside the 10-ring the score runs from the ring value (at the ring line)
     up to value+0.9 (dead centre).  Outside it, each ring's worth of radius is
@@ -82,13 +82,13 @@ def _decimal_score(edge_mm: float, target: TargetSpec) -> float:
 def score_shots(
     shots: Sequence[Shot],
     target: TargetSpec,
-    caliber_mm: float = 0.0,
+    bb_mm: float = 0.0,
     annotate: bool = True,
 ) -> float:
     """Score every shot, optionally writing each ``shot.score``; return total."""
     total = 0.0
     for s in shots:
-        v = score_shot(s, target, caliber_mm)
+        v = score_shot(s, target, bb_mm)
         if annotate:
             s.score = v
         total += v
@@ -128,7 +128,7 @@ def extreme_spread(shots: Sequence[Shot]) -> float:
 def analyze_group(
     shots: Sequence[Shot],
     target: Optional[TargetSpec] = None,
-    caliber_mm: float = 0.0,
+    bb_mm: float = 0.0,
 ) -> GroupStats:
     """Compute the full :class:`GroupStats` for a set of shots.
 
@@ -169,7 +169,7 @@ def analyze_group(
     max_possible = None
     avg_score = None
     if target is not None:
-        total_score = score_shots(shots, target, caliber_mm, annotate=True)
+        total_score = score_shots(shots, target, bb_mm, annotate=True)
         max_possible = float(target.max_value) * n
         if target.decimal_scoring:
             max_possible = (target.max_value + 0.9) * n

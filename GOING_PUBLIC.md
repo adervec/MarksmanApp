@@ -4,7 +4,7 @@ A practical plan for releasing Marksman as a public, open‑source, **non‑comm
 project. It records what's already been done and what's left to decide or do.
 
 > I'm a software developer, not a lawyer — this is a sensible risk‑reduction
-> setup, **not legal advice.** For real peace of mind on the firearms and
+> setup, **not legal advice.** For real peace of mind on the liability and
 > trademark angles, a one‑time consult with a lawyer in your jurisdiction is the
 > gold standard.
 
@@ -14,22 +14,24 @@ project. It records what's already been done and what's left to decide or do.
 |---|---|
 | License | **MIT** — permissive, attribution‑only, no warranty. Fits "share freely, not monetizing." |
 | Game‑franchise skin references | **Removed** the explicit "nods to \<Game\>" mapping from the README; kept original skin names + generic palette descriptions. |
-| Instructional guide | **Kept public** with prominent disclaimers; reframed as personal notes, not professional instruction. |
+| Scope / domain | **Airsoft only.** Pivoted the whole app off real firearms: renamed the tracked item to "tool", swapped categories to airsoft types (AEG/GBB/spring/HPA), "caliber" → 6 mm BB, and ISSF/NRA faces → generic airsoft practice targets. |
+| Instructional guide | **Kept, stripped to platform‑neutral fundamentals** (sight picture, trigger, breathing, reading groups) with prominent disclaimers; all real‑gun technique, ammunition, and firearms law removed. |
 
 ## Done in this pass
 
 - [x] **`LICENSE`** added (MIT, © 2026 Adam Erik Eryavec) — closes the gap where
       `pyproject.toml` declared MIT with no license file.
-- [x] **`DISCLAIMER.md`** — no‑warranty, not‑coaching, not‑medical, firearms
-      safety, not‑legal‑advice, not‑official‑scoring, no‑affiliation, trademarks,
-      limitation of liability.
+- [x] **`DISCLAIMER.md`** — no‑warranty, not‑coaching, not‑medical, airsoft
+      safety (eye protection / field rules), not‑legal‑advice, not‑official‑
+      scoring, no‑affiliation, trademarks, limitation of liability.
 - [x] **`THIRD_PARTY_NOTICES.md`** — license inventory (runtime: none; optional
       Pillow HPND; dev/build MIT/Apache; CI actions; guide fonts OFL).
 - [x] **README** — removed trademarked franchise names from the Skins table,
       added a top‑of‑file disclaimer note and License / Disclaimer / Trademarks
       sections.
-- [x] **Guide** — added a prominent "Read first · Disclaimer" banner and
-      reframed the cover stamp from "TRAINING DOCUMENT" to "PERSONAL NOTES."
+- [x] **Guide** — stripped to platform‑neutral aiming fundamentals (removed
+      guns, ammunition, and firearms law); kept the prominent disclaimer banner
+      and the "PERSONAL NOTES" framing.
 - [x] **`pyproject.toml`** — added OSI license + Python classifiers and the
       repository URL for a correct public/PyPI face.
 
@@ -45,7 +47,7 @@ project. It records what's already been done and what's left to decide or do.
 - [ ] **Change repository visibility** to public:
       GitHub → repo **Settings → General → Danger Zone → Change visibility**.
 - [ ] **Repo polish:** add a short description and topics/tags
-      (`python`, `shooting-sports`, `marksmanship`, `cli`, `image-analysis`),
+      (`python`, `airsoft`, `marksmanship`, `cli`, `image-analysis`),
       and confirm the CI badge renders once public.
 
 ## Optional / nice‑to‑have
@@ -67,13 +69,13 @@ project. It records what's already been done and what's left to decide or do.
 
 ## Residual risk notes (plain English)
 
-- **Trademarks:** the franchise mapping is gone. Remaining references (ISSF, NRA,
-  IPSC target/discipline names, named ranges) are *nominative* — using a name to
-  refer to the actual thing — which is generally fine and is now disclaimed. Low
-  risk for a non‑commercial project.
-- **Firearms‑domain liability:** the disclaimers cover coaching/medical/legal/
-  safety and "use at your own risk." The guide keeps its existing "Not Legal
-  Advice" callout. This is reasonable; it is not a guarantee. A lawyer consult is
-  the only way to be sure.
+- **Trademarks:** the game‑franchise mapping is gone and the app no longer
+  references firearms organizations. Any remaining brand/product names are
+  *nominative* and disclaimed. Low risk for a non‑commercial project.
+- **Airsoft‑domain liability:** airsoft is lower‑stakes than firearms, but BBs
+  can still injure (especially eyes). The disclaimers cover coaching/medical/
+  legal/safety and "use at your own risk," and stress eye protection and field
+  rules. Reasonable, not a guarantee — a lawyer consult is the only way to be
+  sure.
 - **Not monetizing:** keeping it non‑commercial materially lowers trademark and
   liability exposure. If that ever changes, revisit this document first.

@@ -1,13 +1,13 @@
-"""Marksman -- a progress tracker for shooting sports.
+"""Marksman -- a progress tracker for airsoft marksmanship.
 
 The core of the package analyses marked-up images of targets (the groupings of
 shots on a paper target), turns them into precise marksmanship metrics, and
-tracks how those metrics change over time -- overall, per weapon *category*,
-and per specific *weapon*.
+tracks how those metrics change over time -- overall, per tool *category*,
+and per specific *tool*.
 
 Layers (lowest to highest):
 
-* :mod:`marksman.models`    -- plain data: shots, weapons, sessions, targets.
+* :mod:`marksman.models`    -- plain data: shots, tools, sessions, targets.
 * :mod:`marksman.targets`   -- built-in target face specifications (ring sizes).
 * :mod:`marksman.grouping`  -- the analysis maths (group size, mean radius, score).
 * :mod:`marksman.imageio`   -- minimal PNG read/write (pure standard library).
@@ -23,7 +23,7 @@ Every layer is standard-library only -- there are no third-party dependencies.
 
 from .models import (
     Shot,
-    Weapon,
+    Tool,
     Session,
     TargetSpec,
     Ring,
@@ -35,7 +35,7 @@ from .theme import Theme, Painter, get_theme, list_themes
 
 __all__ = [
     "Shot",
-    "Weapon",
+    "Tool",
     "Session",
     "TargetSpec",
     "Ring",

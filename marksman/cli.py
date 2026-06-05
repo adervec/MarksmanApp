@@ -2,23 +2,23 @@
 
 Examples
 --------
-    # Register a weapon
-    marksman weapon add --id ap1 --name "Walther LP500" \
-        --category "Air Pistol" --caliber 4.5mm --caliber-mm 4.5 --airgun
+    # Register a tool (an airsoft replica)
+    marksman tool add --id aeg1 --name "Training AEG" \
+        --category "AEG" --bb 6mm --bb-mm 6.0
 
     # Analyse a marked-up target image (red marker dots), score it, save it
-    marksman analyze --weapon ap1 --target "ISSF 10m Air Pistol" --distance 10 \
+    marksman analyze --tool aeg1 --target "Airsoft Practice 10m" --distance 10 \
         --image shots.png --color red --auto-center
 
     # Or enter shot coordinates by hand (millimetres from point of aim)
-    marksman analyze --weapon ap1 --target "ISSF 10m Air Pistol" --distance 10 \
+    marksman analyze --tool aeg1 --target "Airsoft Practice 10m" --distance 10 \
         --shots "1.2,3.4  -2.0,5.1  0.5,-1.0"
 
     # Track progress
     marksman progress                 # overall
     marksman progress --by-category
-    marksman progress --by-weapon
-    marksman progress --weapon ap1 --sessions
+    marksman progress --by-tool
+    marksman progress --tool ap1 --sessions
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ import sys
 import uuid
 from typing import List, Optional, Tuple
 
-from .models import Shot, Weapon, Session, TargetSpec
+from .models import Shot, Tool, Session, TargetSpec
 from .grouping import analyze_group
 from . import targets as targets_mod
 from .storage import Database, DEFAULT_DB_PATH
@@ -101,36 +101,36 @@ def _make_painter(args: argparse.Namespace, db: Database,
 # Commands
 # --------------------------------------------------------------------------- #
 
-def cmd_weapon_add(args: argparse.Namespace) -> int:
+def cmd_tool_add(args: argparse.Namespace) -> int:
     db = Database.load(args.db)
     wid = args.id or uuid.uuid4().hex[:8]
-    weapon = Weapon(
+    tool = Tool(
         id=wid,
         name=args.name,
         category=args.category,
-        caliber=args.caliber or "",
-        is_airgun=args.airgun,
-        caliber_mm=args.caliber_mm,
+        bb=args.bb or "",
+        is_gas=args.gas,
+        bb_mm=args.bb_mm,
         notes=args.notes or "",
     )
-    db.add_weapon(weapon)
+    db.add_tool(tool)
     db.save()
-    print("Added weapon %s: %s [%s]" % (weapon.id, weapon.name, weapon.category))
+    print("Added tool %s: %s [%s]" % (tool.id, tool.name, tool.category))
     return 0
 
 
-def cmd_weapon_list(args: argparse.Namespace) -> int:
+def cmd_tool_list(args: argparse.Namespace) -> int:
     db = Database.load(args.db)
     p = _make_painter(args, db)
-    if not db.weapons:
-        print("No weapons yet. Add one with: marksman weapon add --name ...")
+    if not db.tools:
+        print("No tools yet. Add one with: marksman tool add --name ...")
         return 0
     print(p.title("%-12s %-28s %-18s %-10s SESSIONS"
-                  % ("ID", "NAME", "CATEGORY", "CALIBER")))
-    for w in sorted(db.weapons.values(), key=lambda x: x.name.lower()):
-        n = len(db.sessions_for_weapon(w.id))
+                  % ("ID", "NAME", "CATEGORY", "BB")))
+    for w in sorted(db.tools.values(), key=lambda x: x.name.lower()):
+        n = len(db.sessions_for_tool(w.id))
         print(p.value("%-12s" % w.id) + " " + p.label("%-28s" % w.name)
-              + " " + p.muted("%-18s %-10s" % (w.category, w.caliber))
+              + " " + p.muted("%-18s %-10s" % (w.category, w.bb))
               + " " + p.value("%d" % n))
     return 0
 
@@ -157,10 +157,10 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     db = Database.load(args.db)
     p = _make_painter(args, db)
 
-    weapon = db.find_weapon(args.weapon)
-    if weapon is None:
-        print("error: no weapon matching %r. List with 'marksman weapon list'."
-              % args.weapon, file=sys.stderr)
+    tool = db.find_tool(args.tool)
+    if tool is None:
+        print("error: no tool matching %r. List with 'marksman tool list'."
+              % args.tool, file=sys.stderr)
         return 2
 
     target = None  # type: Optional[TargetSpec]
@@ -224,26 +224,26 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         print("error: no shots found to analyse.", file=sys.stderr)
         return 1
 
-    caliber_mm = weapon.caliber_mm or 0.0
-    stats = analyze_group(shots, target=target, caliber_mm=caliber_mm)
+    bb_mm = tool.bb_mm or 0.0
+    stats = analyze_group(shots, target=target, bb_mm=bb_mm)
 
     date = args.date or Session.today_iso()
     session = Session(
         id=args.id or _new_session_id(date),
-        weapon_id=weapon.id,
+        tool_id=tool.id,
         date=date,
         shots=shots,
         stats=stats,
         distance_m=args.distance,
         target_name=target.name if target else "",
-        ammo=args.ammo or "",
+        bbs=args.bbs or "",
         image_path=image_path,
         video_path=args.video or "",
         notes=args.notes or "",
     )
 
-    print(p.label("Weapon : ") + p.value(weapon.name)
-          + p.muted(" [%s]" % weapon.category))
+    print(p.label("Tool : ") + p.value(tool.name)
+          + p.muted(" [%s]" % tool.category))
     print(p.muted(detection_note))
     print()
     print(report.format_group_stats(stats, session.target_name, args.distance,
@@ -254,8 +254,8 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         db.save()
         print()
         print(p.good("Saved session ") + p.value(session.id)
-              + p.muted(" (%d for this weapon)."
-                        % len(db.sessions_for_weapon(weapon.id))))
+              + p.muted(" (%d for this tool)."
+                        % len(db.sessions_for_tool(tool.id))))
     return 0
 
 
@@ -267,13 +267,13 @@ def cmd_progress(args: argparse.Namespace) -> int:
         print("No sessions yet. Analyse a target with 'marksman analyze'.")
         return 0
 
-    if args.weapon:
-        weapon = db.find_weapon(args.weapon)
-        if weapon is None:
-            print("error: no weapon matching %r." % args.weapon, file=sys.stderr)
+    if args.tool:
+        tool = db.find_tool(args.tool)
+        if tool is None:
+            print("error: no tool matching %r." % args.tool, file=sys.stderr)
             return 2
         rep = tracker.build_report(
-            db.sessions_for_weapon(weapon.id), "weapon", weapon.name)
+            db.sessions_for_tool(tool.id), "tool", tool.name)
         print(report.format_progress(rep, show_sessions=args.sessions, painter=p))
         return 0
 
@@ -283,19 +283,19 @@ def cmd_progress(args: argparse.Namespace) -> int:
         print(report.format_progress(rep, show_sessions=args.sessions, painter=p))
         return 0
 
-    show_overall = args.all or not (args.by_category or args.by_weapon)
+    show_overall = args.all or not (args.by_category or args.by_tool)
 
     if show_overall:
         rep = tracker.progress_overall(sessions)
         print(report.format_progress(rep, show_sessions=args.sessions, painter=p))
 
     if args.by_category or args.all:
-        for rep in tracker.progress_by_category(sessions, db.weapons).values():
+        for rep in tracker.progress_by_category(sessions, db.tools).values():
             print()
             print(report.format_progress(rep, show_sessions=args.sessions, painter=p))
 
-    if args.by_weapon or args.all:
-        for rep in tracker.progress_by_weapon(sessions, db.weapons).values():
+    if args.by_tool or args.all:
+        for rep in tracker.progress_by_tool(sessions, db.tools).values():
             print()
             print(report.format_progress(rep, show_sessions=args.sessions, painter=p))
     return 0
@@ -309,10 +309,10 @@ def cmd_sessions(args: argparse.Namespace) -> int:
         print("No sessions yet.")
         return 0
     print(p.title("%-12s %-22s %-24s %5s %8s %8s"
-                  % ("DATE", "WEAPON", "TARGET", "SHOTS", "ES(mm)", "SCORE")))
+                  % ("DATE", "TOOL", "TARGET", "SHOTS", "ES(mm)", "SCORE")))
     for s in sessions:
-        w = db.get_weapon(s.weapon_id)
-        wname = w.name if w else s.weapon_id
+        w = db.get_tool(s.tool_id)
+        wname = w.name if w else s.tool_id
         es = ("%.1f" % s.stats.extreme_spread_mm) if s.stats else "-"
         score = ("%.0f" % s.stats.total_score) if (s.stats and s.stats.total_score is not None) else "-"
         print(p.value("%-12s" % s.date) + " " + p.label("%-22.22s" % wname)
@@ -427,15 +427,15 @@ def _file_size(path: str) -> int:
 
 
 def _select_sessions(args: argparse.Namespace, db: Database) -> List[Session]:
-    """Sessions matching --weapon / --before / --session filters (date order)."""
+    """Sessions matching --tool / --before / --session filters (date order)."""
     sessions = db.all_sessions()
     if getattr(args, "session", None):
         sessions = [s for s in sessions if s.id == args.session]
-    if getattr(args, "weapon", None):
-        weapon = db.find_weapon(args.weapon)
-        if weapon is None:
+    if getattr(args, "tool", None):
+        tool = db.find_tool(args.tool)
+        if tool is None:
             return []
-        sessions = [s for s in sessions if s.weapon_id == weapon.id]
+        sessions = [s for s in sessions if s.tool_id == tool.id]
     if getattr(args, "before", None):
         sessions = [s for s in sessions if s.date < args.before]
     return sorted(sessions, key=lambda s: (s.date, s.id))
@@ -446,8 +446,8 @@ def _recreation_path(db: Database, session: Session) -> str:
 
 
 def _render_one(db: Database, session: Session, path: str) -> str:
-    weapon = db.get_weapon(session.weapon_id)
-    shot_r = (weapon.caliber_mm / 2.0) if (weapon and weapon.caliber_mm) else None
+    tool = db.get_tool(session.tool_id)
+    shot_r = (tool.bb_mm / 2.0) if (tool and tool.bb_mm) else None
     target = _session_target(session, db)
     return render_mod.save_recreation(session, path, target=target,
                                       shot_radius_mm=shot_r)
@@ -509,7 +509,7 @@ def cmd_cleanup(args: argparse.Namespace) -> int:
 
     if not candidates:
         print("Nothing to clean up: no stored source media found"
-              + (" for that filter." if (args.weapon or args.before
+              + (" for that filter." if (args.tool or args.before
                                          or args.session) else "."))
         return 0
 
@@ -519,8 +519,8 @@ def cmd_cleanup(args: argparse.Namespace) -> int:
     print(p.title("Cleanup %s" % ("(applying)" if args.apply else "(dry run)")))
     print(p.rule(p.rule_char * 18))
     for s, files, sub in candidates:
-        w = db.get_weapon(s.weapon_id)
-        wname = w.name if w else s.weapon_id
+        w = db.get_tool(s.tool_id)
+        wname = w.name if w else s.tool_id
         print("  " + p.value(s.id) + p.muted("  %s  " % wname)
               + p.label("%s" % _human_bytes(sub)))
         for path, sz in files:
@@ -583,8 +583,8 @@ def cmd_cleanup(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="marksman",
-        description="Progress tracker for shooting sports: analyse marked-up "
-                    "target images and track progress over time.",
+        description="Progress tracker for airsoft marksmanship: analyse "
+                    "marked-up target images and track progress over time.",
     )
     p.add_argument("--db", default=DEFAULT_DB_PATH,
                    help="database file (default: %s)" % DEFAULT_DB_PATH)
@@ -595,23 +595,24 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="command")
     sub.required = True
 
-    # weapon
-    wp = sub.add_parser("weapon", help="manage weapons")
-    wsub = wp.add_subparsers(dest="weapon_command")
+    # tool
+    wp = sub.add_parser("tool", help="manage tools")
+    wsub = wp.add_subparsers(dest="tool_command")
     wsub.required = True
-    wa = wsub.add_parser("add", help="add a weapon")
+    wa = wsub.add_parser("add", help="add a tool")
     wa.add_argument("--id", help="short id (auto if omitted)")
     wa.add_argument("--name", required=True)
     wa.add_argument("--category", default="Other",
-                    help="e.g. 'Air Pistol', 'Centerfire Rifle'")
-    wa.add_argument("--caliber", default="", help="free text, e.g. '.22 LR'")
-    wa.add_argument("--caliber-mm", type=float, dest="caliber_mm",
-                    help="projectile diameter in mm (improves scoring)")
-    wa.add_argument("--airgun", action="store_true")
+                    help="e.g. 'AEG', 'GBB Pistol', 'Bolt-Action'")
+    wa.add_argument("--bb", default="", help="free text, e.g. '6mm' or '0.25g'")
+    wa.add_argument("--bb-mm", type=float, dest="bb_mm",
+                    help="BB diameter in mm, default 6 (improves scoring)")
+    wa.add_argument("--gas", action="store_true",
+                    help="gas-powered (GBB / HPA)")
     wa.add_argument("--notes", default="")
-    wa.set_defaults(func=cmd_weapon_add)
-    wl = wsub.add_parser("list", help="list weapons")
-    wl.set_defaults(func=cmd_weapon_list)
+    wa.set_defaults(func=cmd_tool_add)
+    wl = wsub.add_parser("list", help="list tools")
+    wl.set_defaults(func=cmd_tool_list)
 
     # targets
     tp = sub.add_parser("targets", help="list known target faces")
@@ -619,11 +620,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     # analyze
     ap = sub.add_parser("analyze", help="analyse a target (image or coordinates)")
-    ap.add_argument("--weapon", required=True, help="weapon id or name")
+    ap.add_argument("--tool", required=True, help="tool id or name")
     ap.add_argument("--target", help="target face name (enables scoring)")
     ap.add_argument("--distance", type=float, help="distance in metres")
     ap.add_argument("--date", help="ISO date (default: today)")
-    ap.add_argument("--ammo", default="")
+    ap.add_argument("--bbs", default="")
     ap.add_argument("--notes", default="")
     ap.add_argument("--id", help="session id (auto if omitted)")
     ap.add_argument("--no-save", action="store_true", help="analyse without saving")
@@ -654,11 +655,11 @@ def build_parser() -> argparse.ArgumentParser:
     # progress
     pp = sub.add_parser("progress", help="show progress reports")
     pp.add_argument("--by-category", action="store_true", dest="by_category")
-    pp.add_argument("--by-weapon", action="store_true", dest="by_weapon")
-    pp.add_argument("--weapon", help="single weapon id or name")
+    pp.add_argument("--by-tool", action="store_true", dest="by_tool")
+    pp.add_argument("--tool", help="single tool id or name")
     pp.add_argument("--category", help="single category")
     pp.add_argument("--all", action="store_true",
-                    help="overall + all categories + all weapons")
+                    help="overall + all categories + all tools")
     pp.add_argument("--sessions", action="store_true", help="list each session")
     pp.set_defaults(func=cmd_progress)
 
@@ -669,7 +670,7 @@ def build_parser() -> argparse.ArgumentParser:
     # render (graphical recreations from stored shot data)
     rp = sub.add_parser("render",
                         help="redraw target diagrams from stored shot data")
-    rp.add_argument("--weapon", help="only this weapon (id or name)")
+    rp.add_argument("--tool", help="only this tool (id or name)")
     rp.add_argument("--session", help="only this session id")
     rp.add_argument("--before", help="only sessions before this ISO date")
     rp.add_argument("--out", help="output PNG file (single session) or "
@@ -680,7 +681,7 @@ def build_parser() -> argparse.ArgumentParser:
     cp = sub.add_parser("cleanup",
                         help="delete stored images/videos to save space "
                              "(recreations are kept)")
-    cp.add_argument("--weapon", help="only this weapon (id or name)")
+    cp.add_argument("--tool", help="only this tool (id or name)")
     cp.add_argument("--session", help="only this session id")
     cp.add_argument("--before", help="only sessions before this ISO date")
     cp.add_argument("--apply", action="store_true",

@@ -1,4 +1,4 @@
-"""JSON-backed database for weapons, sessions and custom targets.
+"""JSON-backed database for tools, sessions and custom targets.
 
 The whole dataset lives in a single human-readable JSON file (default
 ``marksman_data.json`` in the current directory).  It is small -- a few
@@ -14,7 +14,7 @@ import tempfile
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from .models import Session, Weapon, TargetSpec
+from .models import Session, Tool, TargetSpec
 
 DEFAULT_DB_PATH = "marksman_data.json"
 SCHEMA_VERSION = 1
@@ -24,7 +24,7 @@ SCHEMA_VERSION = 1
 class Database:
     """In-memory view of the dataset, plus load/save helpers."""
 
-    weapons: Dict[str, Weapon] = field(default_factory=dict)
+    tools: Dict[str, Tool] = field(default_factory=dict)
     sessions: Dict[str, Session] = field(default_factory=dict)
     custom_targets: Dict[str, TargetSpec] = field(default_factory=dict)
     # Small bag of user preferences (e.g. the chosen "skin"/theme).  Kept as a
@@ -43,40 +43,40 @@ class Database:
         return os.path.join(os.path.dirname(os.path.abspath(self.path)),
                             "recreations")
 
-    # -- weapons ----------------------------------------------------------- #
-    def add_weapon(self, weapon: Weapon) -> None:
-        if weapon.id in self.weapons:
-            raise ValueError("Weapon id %r already exists." % weapon.id)
-        self.weapons[weapon.id] = weapon
+    # -- tools ----------------------------------------------------------- #
+    def add_tool(self, tool: Tool) -> None:
+        if tool.id in self.tools:
+            raise ValueError("Tool id %r already exists." % tool.id)
+        self.tools[tool.id] = tool
 
-    def get_weapon(self, weapon_id: str) -> Optional[Weapon]:
-        return self.weapons.get(weapon_id)
+    def get_tool(self, tool_id: str) -> Optional[Tool]:
+        return self.tools.get(tool_id)
 
-    def find_weapon(self, needle: str) -> Optional[Weapon]:
-        """Resolve a weapon by id, or by exact/substring name (case-insensitive)."""
-        if needle in self.weapons:
-            return self.weapons[needle]
+    def find_tool(self, needle: str) -> Optional[Tool]:
+        """Resolve a tool by id, or by exact/substring name (case-insensitive)."""
+        if needle in self.tools:
+            return self.tools[needle]
         low = needle.strip().lower()
-        for w in self.weapons.values():
+        for w in self.tools.values():
             if w.name.lower() == low:
                 return w
-        matches = [w for w in self.weapons.values() if low in w.name.lower()]
+        matches = [w for w in self.tools.values() if low in w.name.lower()]
         return matches[0] if len(matches) == 1 else None
 
     # -- sessions ---------------------------------------------------------- #
     def add_session(self, session: Session) -> None:
-        if session.weapon_id not in self.weapons:
+        if session.tool_id not in self.tools:
             raise ValueError(
-                "Session references unknown weapon id %r." % session.weapon_id
+                "Session references unknown tool id %r." % session.tool_id
             )
         self.sessions[session.id] = session
 
-    def sessions_for_weapon(self, weapon_id: str) -> List[Session]:
-        return [s for s in self.sessions.values() if s.weapon_id == weapon_id]
+    def sessions_for_tool(self, tool_id: str) -> List[Session]:
+        return [s for s in self.sessions.values() if s.tool_id == tool_id]
 
     def sessions_for_category(self, category: str) -> List[Session]:
-        ids = set(w.id for w in self.weapons.values() if w.category == category)
-        return [s for s in self.sessions.values() if s.weapon_id in ids]
+        ids = set(w.id for w in self.tools.values() if w.category == category)
+        return [s for s in self.sessions.values() if s.tool_id in ids]
 
     def all_sessions(self) -> List[Session]:
         return list(self.sessions.values())
@@ -89,7 +89,7 @@ class Database:
     def to_dict(self) -> dict:
         return {
             "schema_version": SCHEMA_VERSION,
-            "weapons": [w.to_dict() for w in self.weapons.values()],
+            "tools": [w.to_dict() for w in self.tools.values()],
             "sessions": [s.to_dict() for s in self.sessions.values()],
             "custom_targets": [t.to_dict() for t in self.custom_targets.values()],
             "settings": self.settings,
@@ -116,9 +116,9 @@ class Database:
     @classmethod
     def from_dict(cls, d: dict, path: str = DEFAULT_DB_PATH) -> "Database":
         db = cls(path=path)
-        for wd in d.get("weapons", []):
-            w = Weapon.from_dict(wd)
-            db.weapons[w.id] = w
+        for wd in d.get("tools", []):
+            w = Tool.from_dict(wd)
+            db.tools[w.id] = w
         for sd in d.get("sessions", []):
             s = Session.from_dict(sd)
             db.sessions[s.id] = s

@@ -1,22 +1,17 @@
-"""Built-in target face specifications.
+"""Built-in target face specifications for airsoft practice.
 
-Ring diameters are the **outer** diameter of each scoring zone, in millimetres,
-and follow the published ISSF / NRA nominal dimensions.  They are good enough
-for tracking personal progress; for official scoring always defer to the actual
-printed target.
-
-Add your own with :func:`uniform_target` or by constructing a
-:class:`~marksman.models.TargetSpec` directly, then register it via
-:func:`register`.
+Airsoft has no single universal scoring face, so these are generic concentric
+ring targets sized for common practice distances with 6 mm BBs.  Ring sizes are
+reasonable defaults for personal progress tracking, not an official standard --
+print whatever face you like and register a custom one with
+:func:`uniform_target` + :func:`register`.
 """
 
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 from .models import Ring, TargetSpec
-
-_MM_PER_IN = 25.4
 
 
 def uniform_target(
@@ -47,91 +42,32 @@ def uniform_target(
     )
 
 
-def _rings(pairs: List[Tuple[int, float]]) -> List[Ring]:
-    return [Ring(value=v, diameter_mm=d) for v, d in pairs]
-
-
 # --------------------------------------------------------------------------- #
-# Standard faces
+# Standard airsoft practice faces (generic concentric bullseyes)
 # --------------------------------------------------------------------------- #
 
-def _issf_air_pistol() -> TargetSpec:
-    # ISSF 10 m Air Pistol. Inner-ten 5.0 mm; rings step 8 mm radial.
-    pairs = [
-        (10, 11.5), (9, 27.5), (8, 43.5), (7, 59.5), (6, 75.5),
-        (5, 91.5), (4, 107.5), (3, 123.5), (2, 139.5), (1, 155.5),
-    ]
-    return TargetSpec(
-        name="ISSF 10m Air Pistol",
-        rings=_rings(pairs),
-        decimal_scoring=True,
-        face_width_mm=170.0,
-        face_height_mm=170.0,
-        notes="10 m air pistol; pellet 4.5 mm.",
-    )
+def _airsoft_practice_10m() -> TargetSpec:
+    # General-purpose 10 m bullseye: 40 mm ten-ring, 20 mm radial step.
+    t = uniform_target("Airsoft Practice 10m", ten_ring_diameter_mm=40.0,
+                       ring_step_mm=20.0, face_size_mm=400.0)
+    t.notes = "Generic 10 m practice bullseye for 6 mm BBs."
+    return t
 
 
-def _issf_air_rifle() -> TargetSpec:
-    # ISSF 10 m Air Rifle. Tiny rings; 10-ring 0.5 mm, step 2.5 mm radial.
-    pairs = [
-        (10, 0.5), (9, 5.5), (8, 10.5), (7, 15.5), (6, 20.5),
-        (5, 25.5), (4, 30.5), (3, 35.5), (2, 40.5), (1, 45.5),
-    ]
-    return TargetSpec(
-        name="ISSF 10m Air Rifle",
-        rings=_rings(pairs),
-        decimal_scoring=True,
-        face_width_mm=80.0,
-        face_height_mm=80.0,
-        notes="10 m air rifle; pellet 4.5 mm (pellet is far larger than the 10-ring -- edge scoring matters).",
-    )
+def _airsoft_cqb_7m() -> TargetSpec:
+    # Larger rings for close, fast shooting.
+    t = uniform_target("Airsoft CQB 7m", ten_ring_diameter_mm=70.0,
+                       ring_step_mm=30.0, face_size_mm=600.0)
+    t.notes = "Close-range practice face (CQB distances)."
+    return t
 
 
-def _issf_50m_rifle() -> TargetSpec:
-    pairs = [
-        (10, 10.4), (9, 26.4), (8, 42.4), (7, 58.4), (6, 74.4),
-        (5, 90.4), (4, 106.4), (3, 122.4), (2, 138.4), (1, 154.4),
-    ]
-    return TargetSpec(
-        name="ISSF 50m Rifle",
-        rings=_rings(pairs),
-        decimal_scoring=True,
-        face_width_mm=250.0,
-        face_height_mm=250.0,
-        notes="50 m smallbore rifle prone/3P.",
-    )
-
-
-def _issf_25m_precision_pistol() -> TargetSpec:
-    # Also the 50 m pistol face. 10-ring 50 mm, step 25 mm radial.
-    pairs = [
-        (10, 50.0), (9, 100.0), (8, 150.0), (7, 200.0), (6, 250.0),
-        (5, 300.0), (4, 350.0), (3, 400.0), (2, 450.0), (1, 500.0),
-    ]
-    return TargetSpec(
-        name="ISSF 25m/50m Precision Pistol",
-        rings=_rings(pairs),
-        decimal_scoring=False,
-        face_width_mm=550.0,
-        face_height_mm=550.0,
-        notes="25 m precision / 50 m pistol face.",
-    )
-
-
-def _nra_b8() -> TargetSpec:
-    # NRA B-8 (25 yd timed/rapid). Diameters in inches -> mm.
-    in_pairs = [
-        (10, 3.36), (9, 5.54), (8, 8.00), (7, 11.00), (6, 14.80), (5, 19.68),
-    ]
-    pairs = [(v, d * _MM_PER_IN) for v, d in in_pairs]
-    return TargetSpec(
-        name="NRA B-8",
-        rings=_rings(pairs),
-        decimal_scoring=False,
-        face_width_mm=21.0 * _MM_PER_IN,
-        face_height_mm=21.0 * _MM_PER_IN,
-        notes="NRA B-8 25-yard pistol; X-ring 1.695 in.",
-    )
+def _airsoft_precision_20m() -> TargetSpec:
+    # Tighter rings for longer-range DMR / sniper practice.
+    t = uniform_target("Airsoft Precision 20m", ten_ring_diameter_mm=25.0,
+                       ring_step_mm=15.0, face_size_mm=350.0)
+    t.notes = "Tighter face for longer-range (DMR / sniper) practice."
+    return t
 
 
 _BUILTINS = {}  # type: dict
@@ -142,11 +78,9 @@ def _register_builtin(spec: TargetSpec) -> None:
 
 
 for _factory in (
-    _issf_air_pistol,
-    _issf_air_rifle,
-    _issf_50m_rifle,
-    _issf_25m_precision_pistol,
-    _nra_b8,
+    _airsoft_practice_10m,
+    _airsoft_cqb_7m,
+    _airsoft_precision_20m,
 ):
     _register_builtin(_factory())
 

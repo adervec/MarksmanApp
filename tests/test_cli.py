@@ -26,13 +26,13 @@ class TestCliFlow(unittest.TestCase):
         self.assertEqual(shots[1].y_mm, -2.0)
 
     def test_full_flow(self):
-        code, _ = self.run_cli("weapon", "add", "--id", "ap1", "--name",
-                               "Test AP", "--category", "Air Pistol",
-                               "--caliber-mm", "4.5", "--airgun")
+        code, _ = self.run_cli("tool", "add", "--id", "ap1", "--name",
+                               "Test AEG", "--category", "AEG",
+                               "--bb-mm", "6.0")
         self.assertEqual(code, 0)
 
         code, out = self.run_cli(
-            "analyze", "--weapon", "ap1", "--target", "ISSF 10m Air Pistol",
+            "analyze", "--tool", "ap1", "--target", "Airsoft Practice 10m",
             "--distance", "10", "--date", "2026-01-01",
             "--shots", "0,0 2,0 0,2 -1,-1",
         )
@@ -42,7 +42,7 @@ class TestCliFlow(unittest.TestCase):
 
         # Second, tighter session later -> improvement.
         code, _ = self.run_cli(
-            "analyze", "--weapon", "ap1", "--target", "ISSF 10m Air Pistol",
+            "analyze", "--tool", "ap1", "--target", "Airsoft Practice 10m",
             "--distance", "10", "--date", "2026-02-01",
             "--shots", "0,0 1,0 0,1 -0.5,-0.5",
         )
@@ -50,27 +50,27 @@ class TestCliFlow(unittest.TestCase):
 
         # Persisted?
         db = Database.load(self.db)
-        self.assertEqual(len(db.sessions_for_weapon("ap1")), 2)
+        self.assertEqual(len(db.sessions_for_tool("ap1")), 2)
 
-        code, out = self.run_cli("progress", "--weapon", "ap1")
+        code, out = self.run_cli("progress", "--tool", "ap1")
         self.assertEqual(code, 0)
         self.assertIn("Group size", out)
 
         code, out = self.run_cli("progress", "--by-category")
         self.assertEqual(code, 0)
-        self.assertIn("Air Pistol", out)
+        self.assertIn("AEG", out)
 
         code, out = self.run_cli("sessions")
         self.assertEqual(code, 0)
         self.assertIn("2026-01-01", out)
 
-    def test_analyze_unknown_weapon(self):
-        code, _ = self.run_cli("analyze", "--weapon", "ghost", "--shots", "0,0")
+    def test_analyze_unknown_tool(self):
+        code, _ = self.run_cli("analyze", "--tool", "ghost", "--shots", "0,0")
         self.assertEqual(code, 2)
 
     def test_no_save(self):
-        self.run_cli("weapon", "add", "--id", "w", "--name", "W")
-        code, out = self.run_cli("analyze", "--weapon", "w",
+        self.run_cli("tool", "add", "--id", "w", "--name", "W")
+        code, out = self.run_cli("analyze", "--tool", "w",
                                  "--shots", "0,0 5,5", "--no-save")
         self.assertEqual(code, 0)
         db = Database.load(self.db)

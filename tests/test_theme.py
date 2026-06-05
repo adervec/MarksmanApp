@@ -141,17 +141,17 @@ class TestReportPlainEquivalence(unittest.TestCase):
     """A disabled painter must not change the produced text at all."""
 
     def test_group_stats_plain(self):
-        plain = report.format_group_stats(SAMPLE_STATS, "ISSF 10m Air Pistol", 10.0)
+        plain = report.format_group_stats(SAMPLE_STATS, "Airsoft Practice 10m", 10.0)
         themed_disabled = report.format_group_stats(
-            SAMPLE_STATS, "ISSF 10m Air Pistol", 10.0,
+            SAMPLE_STATS, "Airsoft Practice 10m", 10.0,
             painter=Painter(get_theme("inferno"), enabled=False))
         self.assertEqual(plain, themed_disabled)
         self.assertNotIn(_ESC, plain)
 
     def test_group_stats_themed_strips_to_plain(self):
-        plain = report.format_group_stats(SAMPLE_STATS, "ISSF 10m Air Pistol", 10.0)
+        plain = report.format_group_stats(SAMPLE_STATS, "Airsoft Practice 10m", 10.0)
         themed = report.format_group_stats(
-            SAMPLE_STATS, "ISSF 10m Air Pistol", 10.0,
+            SAMPLE_STATS, "Airsoft Practice 10m", 10.0,
             painter=Painter(get_theme("orbital"), enabled=True))
         self.assertIn(_ESC, themed)
         self.assertEqual(strip_ansi(themed), plain)
@@ -198,16 +198,16 @@ class TestThemeCli(unittest.TestCase):
 
     def test_reports_stay_plain_when_not_a_tty(self):
         # Captured output is not a terminal, so even a chosen skin stays plain.
-        self.run_cli("weapon", "add", "--id", "ap1", "--name", "AP",
-                     "--category", "Air Pistol", "--caliber-mm", "4.5", "--airgun")
-        code, out = self.run_cli("--theme", "inferno", "analyze", "--weapon",
-                                 "ap1", "--target", "ISSF 10m Air Pistol",
+        self.run_cli("tool", "add", "--id", "ap1", "--name", "AP",
+                     "--category", "AEG", "--bb-mm", "6.0")
+        code, out = self.run_cli("--theme", "inferno", "analyze", "--tool",
+                                 "ap1", "--target", "Airsoft Practice 10m",
                                  "--distance", "10", "--shots", "0,0 2,0 0,2")
         self.assertEqual(code, 0)
         self.assertNotIn(_ESC, out)
         self.assertIn("Group size", out)
 
-        code, out = self.run_cli("--theme", "inferno", "progress", "--weapon", "ap1")
+        code, out = self.run_cli("--theme", "inferno", "progress", "--tool", "ap1")
         self.assertEqual(code, 0)
         self.assertNotIn(_ESC, out)
 

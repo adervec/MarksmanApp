@@ -3,8 +3,8 @@
 Progress is reported at three scopes, as the goal requires:
 
 * **overall** -- every session,
-* **by category** -- e.g. all "Air Pistol" sessions,
-* **by weapon** -- a single specific gun.
+* **by category** -- e.g. all "AEG" sessions,
+* **by tool** -- a single specific replica.
 
 For each scope we summarise the key metrics with their best value, average,
 latest value and a *trend* (is the shooter improving?).
@@ -25,7 +25,7 @@ from __future__ import annotations
 from dataclasses import dataclass, asdict, field
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
-from .models import Session, Weapon
+from .models import Session, Tool
 
 # 1 milliradian subtends 1 mm at 1 m. 1 mrad = 3.43775 MOA.
 _MOA_PER_MRAD = 3.43774677
@@ -140,7 +140,7 @@ def summarize_metric(
 
 @dataclass
 class ProgressReport:
-    scope_type: str                 # overall | category | weapon
+    scope_type: str                 # overall | category | tool
     scope_name: str
     session_count: int
     shot_count: int
@@ -233,7 +233,7 @@ def build_report(
             "session_id": s.id,
             "date": s.date,
             "day_offset": off,
-            "weapon_id": s.weapon_id,
+            "tool_id": s.tool_id,
             "distance_m": s.distance_m,
             "shots": s.stats.shot_count,
             "extreme_spread_mm": s.stats.extreme_spread_mm,
@@ -268,17 +268,17 @@ def _score_pct(s: Session) -> Optional[float]:
 # --------------------------------------------------------------------------- #
 
 def progress_overall(sessions: Sequence[Session]) -> ProgressReport:
-    return build_report(sessions, "overall", "All weapons")
+    return build_report(sessions, "overall", "All tools")
 
 
 def progress_by_category(
     sessions: Sequence[Session],
-    weapons: Dict[str, Weapon],
+    tools: Dict[str, Tool],
 ) -> Dict[str, ProgressReport]:
-    """One report per weapon category present in the sessions."""
+    """One report per tool category present in the sessions."""
     buckets = {}  # type: Dict[str, List[Session]]
     for s in sessions:
-        w = weapons.get(s.weapon_id)
+        w = tools.get(s.tool_id)
         category = w.category if w else "Other"
         buckets.setdefault(category, []).append(s)
     return {
@@ -287,17 +287,17 @@ def progress_by_category(
     }
 
 
-def progress_by_weapon(
+def progress_by_tool(
     sessions: Sequence[Session],
-    weapons: Dict[str, Weapon],
+    tools: Dict[str, Tool],
 ) -> Dict[str, ProgressReport]:
-    """One report per weapon that has sessions."""
+    """One report per tool that has sessions."""
     buckets = {}  # type: Dict[str, List[Session]]
     for s in sessions:
-        buckets.setdefault(s.weapon_id, []).append(s)
+        buckets.setdefault(s.tool_id, []).append(s)
     reports = {}
     for wid, ss in buckets.items():
-        w = weapons.get(wid)
+        w = tools.get(wid)
         name = w.name if w else wid
-        reports[wid] = build_report(ss, "weapon", name)
+        reports[wid] = build_report(ss, "tool", name)
     return reports

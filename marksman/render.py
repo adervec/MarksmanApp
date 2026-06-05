@@ -93,7 +93,7 @@ def _hline(img: imageio.Image, y: int, x0: int, x1: int,
 def _black_radius_mm(target: TargetSpec) -> float:
     """Radius of the black aiming area.
 
-    On ISSF-style faces the black covers the higher-value rings; we approximate
+    On bullseye-style faces the black covers the higher-value rings; we approximate
     it by the outer edge of the 7-ring, falling back to ~45 % of the outer
     radius when there is no 7-ring.
     """

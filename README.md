@@ -2,38 +2,39 @@
 
 [![CI](https://github.com/adervec/MarksmanApp/actions/workflows/ci.yml/badge.svg)](https://github.com/adervec/MarksmanApp/actions/workflows/ci.yml)
 
-A progress tracker for shooting sports — pistol, rifle, shotgun, and airguns,
-indoor or outdoor. Its core feature **analyses a marked-up image of a target**
-(the groupings of your shots), turns it into precise marksmanship metrics, and
-**tracks your progress over time** — overall, by weapon **category**, and by
-**specific weapon**.
+A progress tracker for **airsoft** — AEGs, gas blowback (GBB) pistols and
+rifles, spring, HPA, and bolt-action replicas. Its core feature **analyses a
+marked-up image of a target** (the groupings of your hits), turns it into
+precise marksmanship metrics, and **tracks your progress over time** — overall,
+by tool **category**, and by **specific tool**.
 
 It is pure Python standard library: **no third-party packages required**
 (works on Python 3.9+). Image analysis reads PNG out of the box; if Pillow
 happens to be installed, JPEG and other formats work too.
 
 > ⚠️ **Disclaimer — please read.** Marksman is a hobby project by a software
-> developer — **not** a firearms instructor, coach, doctor, or lawyer. It
-> computes metrics for **personal progress tracking only**; it is **not**
-> coaching, safety, medical, or legal advice, and **not** an official scoring
-> system. Always follow safe firearm handling and your local laws. Provided
-> "as is", with no warranty. Full text: **[DISCLAIMER.md](DISCLAIMER.md)**.
+> developer — **not** a coach, instructor, doctor, or lawyer. It computes
+> metrics for **personal progress tracking only**; it is **not** coaching,
+> safety, medical, or legal advice, and **not** an official scoring system.
+> Airsoft still fires projectiles: **always wear ANSI-rated eye protection,
+> follow your field's rules, and obey your local laws.** Provided "as is", with
+> no warranty. Full text: **[DISCLAIMER.md](DISCLAIMER.md)**.
 
 ## What it measures
 
-From a set of shots it computes the standard measures used to judge a group:
+From a set of hits it computes the standard measures used to judge a group:
 
 | Metric | Meaning |
 |---|---|
 | **Group size (extreme spread)** | Largest centre-to-centre distance — the headline "group size". |
-| **Mean radius** | Average distance of shots from the group centre — a stable precision measure. |
+| **Mean radius** | Average distance of hits from the group centre — a stable precision measure. |
 | **RMS radius / CEP / σx, σy** | Further precision descriptors. |
-| **Zero error (POA–POI)** | How far the group centre sits from your point of aim (sight zero). |
-| **Score** | Points off the target's rings, with optional ISSF decimal (tenths) scoring and "edge breaks the line" caliber handling. |
+| **Zero error (POA–POI)** | How far the group centre sits from your point of aim (sight/hop zero). |
+| **Score** | Points off the target's rings, with optional decimal (tenths) scoring and "edge breaks the line" BB-size handling. |
 
-Group size is also reported as an **angle** (mrad / MOA) using the shooting
-distance, and score as a **percentage of maximum**, so sessions at different
-distances and on different target faces can be compared on equal terms.
+Group size is also reported as an **angle** (mrad / MOA) using the distance, and
+score as a **percentage of maximum**, so sessions at different distances and on
+different target faces can be compared on equal terms.
 
 ## Install (optional)
 
@@ -49,24 +50,24 @@ Otherwise call it as a module: `python -m marksman.cli ...`
 ## Quick start
 
 ```bash
-# 1) Register a weapon
-python -m marksman.cli weapon add --id ap1 --name "Walther LP500" \
-    --category "Air Pistol" --caliber 4.5mm --caliber-mm 4.5 --airgun
+# 1) Register a tool (your airsoft replica)
+python -m marksman.cli tool add --id aeg1 --name "Training AEG" \
+    --category "AEG" --bb 6mm --bb-mm 6.0
 
-# 2a) Analyse a photo/scan where each shot is marked with a red dot/circle.
-#     The image spans a 170 mm target face; find the bull automatically.
-python -m marksman.cli analyze --weapon ap1 --target "ISSF 10m Air Pistol" \
+# 2a) Analyse a photo/scan where each hit is marked with a red dot/circle.
+#     The image spans a 400 mm target face; find the bull automatically.
+python -m marksman.cli analyze --tool aeg1 --target "Airsoft Practice 10m" \
     --distance 10 --image my_target.png --color red --auto-center
 
 # 2b) ...or just type the shot coordinates (mm from point of aim):
-python -m marksman.cli analyze --weapon ap1 --target "ISSF 10m Air Pistol" \
+python -m marksman.cli analyze --tool aeg1 --target "Airsoft Practice 10m" \
     --distance 10 --shots "1.2,3.4  -2.0,5.1  0.5,-1.0"
 
 # 3) Track progress
 python -m marksman.cli progress                 # overall
 python -m marksman.cli progress --by-category
-python -m marksman.cli progress --by-weapon
-python -m marksman.cli progress --weapon ap1 --sessions
+python -m marksman.cli progress --by-tool
+python -m marksman.cli progress --tool aeg1 --sessions
 python -m marksman.cli sessions                 # list every saved target
 python -m marksman.cli targets                  # built-in target faces
 
@@ -76,18 +77,18 @@ python -m marksman.cli theme preview inferno    # try one on
 python -m marksman.cli theme set recon          # make it the default
 
 # 5) Save space: recreate results as diagrams, then delete bulky source media
-python -m marksman.cli render --weapon ap1      # redraw from stored shots
-python -m marksman.cli cleanup --weapon ap1     # dry run (add --apply to delete)
+python -m marksman.cli render --tool aeg1       # redraw from stored shots
+python -m marksman.cli cleanup --tool aeg1      # dry run (add --apply to delete)
 ```
 
 ## Analysing an image
 
-The shooter marks each shot on the target (a coloured pen dot or ring around
-each hole is the most reliable). Then:
+Mark each hit on the target (a coloured pen dot or ring around each impact is
+the most reliable). Then:
 
 * **Detection** — `--mode marker` finds the coloured marks (`--color
   red|green|blue|orange|purple|yellow`, or `--rgb r,g,b`). `--mode holes`
-  detects dark bullet holes directly on a clean scan.
+  detects dark impact marks directly on a clean scan.
 * **Where the centre is** — `--center X,Y` (pixels), or `--auto-center` to use
   the dark bull, or it defaults to the image centre.
 * **Scale (mm per pixel)** — one of `--mm-per-px`, `--reference "x1,y1 x2,y2
@@ -134,18 +135,18 @@ ANSI is enabled automatically (Windows Terminal, PowerShell, or modern
 Source photos and videos of your targets are bulky and pile up fast. Because
 every session stores the **shot coordinates** (mm from point of aim) and the
 **target** they were scored on, Marksman can always *redraw* a clean diagram of
-the result — the rings with your shots plotted on them — without the original
+the result — the rings with your hits plotted on them — without the original
 media. So the source files can be deleted to save space while the visual
 result is preserved.
 
 ```bash
 # Redraw a result from stored data (no source media needed)
 marksman render --session 2026-04-15        # -> recreations/2026-04-15.png
-marksman render --weapon ap1                # one PNG per session
+marksman render --tool aeg1                 # one PNG per session
 marksman render --session 2026-04-15 --out group.png
 
 # Reclaim space. Dry run first (shows what would be freed, deletes nothing):
-marksman cleanup --weapon ap1
+marksman cleanup --tool aeg1
 marksman cleanup --before 2026-01-01
 marksman cleanup --apply                    # saves a recreation, then deletes
 ```
@@ -188,15 +189,16 @@ from marksman.grouping import analyze_group
 from marksman.targets import get_target
 
 shots = [Shot(1.2, 3.4), Shot(-2.0, 5.1), Shot(0.5, -1.0)]
-stats = analyze_group(shots, target=get_target("ISSF 10m Air Pistol"))
+stats = analyze_group(shots, target=get_target("Airsoft Practice 10m"))
 print(stats.extreme_spread_mm, stats.total_score)
 ```
 
 ## Scope & accuracy
 
-Ring dimensions follow published ISSF/NRA nominals and are intended for
-personal progress tracking, not official scoring. For matches, use the
-official scored target.
+The built-in faces are **generic practice bullseyes** with reasonable ring
+sizes for 6 mm BBs at common distances — they are for personal progress
+tracking, not an official standard. Print whatever face you like and register a
+custom one with `targets.uniform_target` + `targets.register`.
 
 ## License
 
@@ -208,12 +210,12 @@ public-release plan and checklist.
 ## Disclaimer
 
 Marksman is **not** professional coaching, medical, safety, or legal advice, and
-**not** an official scoring system. Firearm safety and legal compliance are your
-responsibility. Full text: **[DISCLAIMER.md](DISCLAIMER.md)**.
+**not** an official scoring system. Eye protection, field rules, and legal
+compliance are your responsibility. Full text: **[DISCLAIMER.md](DISCLAIMER.md)**.
 
 ## Trademarks & third-party references
 
-Organization, target, and discipline names (e.g. ISSF, NRA, IPSC) are trademarks
-of their respective owners, used here only descriptively — no affiliation or
+Any product, brand, or organization names referenced are the property of their
+respective owners and are used only descriptively — no affiliation or
 endorsement is implied. Marksman bundles no third-party code or assets; see
 **[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)**.

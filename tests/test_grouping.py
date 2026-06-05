@@ -60,10 +60,10 @@ class TestScoring(unittest.TestCase):
         self.assertEqual(score_shot(Shot(50, 0), self.tgt), 1.0)
         self.assertEqual(score_shot(Shot(50.1, 0), self.tgt), 0.0)  # miss
 
-    def test_caliber_edge_scoring(self):
+    def test_bb_edge_scoring(self):
         # Shot centre at r=6, but a 4mm projectile's edge reaches r=4 -> 10.
-        self.assertEqual(score_shot(Shot(6, 0), self.tgt, caliber_mm=4.0), 10.0)
-        # Without caliber it's a 9.
+        self.assertEqual(score_shot(Shot(6, 0), self.tgt, bb_mm=4.0), 10.0)
+        # Without bb it's a 9.
         self.assertEqual(score_shot(Shot(6, 0), self.tgt), 9.0)
 
     def test_score_shots_total_and_annotate(self):

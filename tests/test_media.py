@@ -7,7 +7,7 @@ from contextlib import redirect_stdout
 from marksman import imageio, render
 from marksman.cli import main
 from marksman.grouping import analyze_group
-from marksman.models import Session, Shot, Weapon
+from marksman.models import Session, Shot, Tool
 from marksman.storage import Database
 from marksman.targets import get_target
 
@@ -15,8 +15,8 @@ from marksman.targets import get_target
 def _session(date="2026-04-15", pts=((8, 12), (15, 6), (4, 18), (12, 14)),
              target=None, **kw):
     shots = [Shot(x, y) for x, y in pts]
-    st = analyze_group(shots, target=target, caliber_mm=4.5)
-    return Session(id=date, weapon_id="ap1", date=date, shots=shots, stats=st,
+    st = analyze_group(shots, target=target, bb_mm=4.5)
+    return Session(id=date, tool_id="ap1", date=date, shots=shots, stats=st,
                    distance_m=10.0, target_name=(target.name if target else ""),
                    **kw)
 
@@ -31,7 +31,7 @@ def _colors(img):
 
 class TestRender(unittest.TestCase):
     def test_renders_target_and_shots(self):
-        tgt = get_target("ISSF 10m Air Pistol")
+        tgt = get_target("Airsoft Practice 10m")
         img = render.render_session(_session(target=tgt), target=tgt,
                                     size_px=240)
         self.assertEqual((img.width, img.height), (240, 240))
@@ -48,15 +48,15 @@ class TestRender(unittest.TestCase):
         self.assertIn(render._SHOT, _colors(img))
 
     def test_renders_with_no_shots(self):
-        tgt = get_target("NRA B-8")
-        s = Session(id="empty", weapon_id="ap1", date="2026-01-01", shots=[],
+        tgt = get_target("Airsoft CQB 7m")
+        s = Session(id="empty", tool_id="ap1", date="2026-01-01", shots=[],
                     target_name=tgt.name)
         img = render.render_session(s, target=tgt, size_px=160)
         self.assertEqual((img.width, img.height), (160, 160))
 
     def test_save_recreation_writes_valid_png(self):
         d = tempfile.mkdtemp()
-        tgt = get_target("ISSF 10m Air Pistol")
+        tgt = get_target("Airsoft Practice 10m")
         out = os.path.join(d, "sub", "rec.png")          # nested dir is created
         path = render.save_recreation(_session(target=tgt), out, target=tgt,
                                       size_px=200)
@@ -79,7 +79,7 @@ class TestStorageLocations(unittest.TestCase):
         d = tempfile.mkdtemp()
         path = os.path.join(d, "db.json")
         db = Database(path=path)
-        db.add_weapon(Weapon("ap1", "AP"))
+        db.add_tool(Tool("ap1", "AP"))
         db.add_session(_session(image_path="/x/a.png", video_path="/x/a.mp4",
                                 recreation_path="/x/r.png", media_cleaned=True))
         db.save()
@@ -95,9 +95,9 @@ class TestCleanupCli(unittest.TestCase):
         self.dir = tempfile.mkdtemp()
         self.db_path = os.path.join(self.dir, "db.json")
         db = Database(path=self.db_path)
-        db.add_weapon(Weapon(id="ap1", name="Walther LP500",
-                             category="Air Pistol", caliber_mm=4.5))
-        self.tgt = get_target("ISSF 10m Air Pistol")
+        db.add_tool(Tool(id="ap1", name="Training AEG",
+                             category="AEG", bb_mm=6.0))
+        self.tgt = get_target("Airsoft Practice 10m")
         self.img = os.path.join(self.dir, "s.png")
         self.vid = os.path.join(self.dir, "s.mp4")
         with open(self.img, "wb") as fh:
@@ -170,19 +170,19 @@ class TestCleanupCli(unittest.TestCase):
         self.assertIn("Nothing to clean up", out)
 
     def test_filters_scope_selection(self):
-        # A second weapon/session whose media should NOT be touched by a filter.
+        # A second tool/session whose media should NOT be touched by a filter.
         db = Database.load(self.db_path)
-        db.add_weapon(Weapon(id="r1", name="Anschutz", category="Air Rifle",
-                             caliber_mm=4.5))
+        db.add_tool(Tool(id="r1", name="Recon GBB", category="GBB Rifle",
+                             bb_mm=6.0))
         other = os.path.join(self.dir, "other.png")
         with open(other, "wb") as fh:
             fh.write(b"\x00" * 10_000)
         db.add_session(_session(date="2026-01-01", target=self.tgt,
                                 image_path=other))
-        db.sessions["2026-01-01"].weapon_id = "r1"
+        db.sessions["2026-01-01"].tool_id = "r1"
         db.save()
 
-        code, out = self.run_cli("cleanup", "--apply", "--weapon", "ap1")
+        code, out = self.run_cli("cleanup", "--apply", "--tool", "ap1")
         self.assertEqual(code, 0)
         self.assertFalse(os.path.exists(self.img))     # ap1's media gone
         self.assertTrue(os.path.exists(other))         # r1's media untouched

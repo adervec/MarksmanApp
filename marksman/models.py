@@ -26,20 +26,20 @@ from typing import Any, List, Optional
 
 
 # --------------------------------------------------------------------------- #
-# Weapon categories
+# Tool categories
 # --------------------------------------------------------------------------- #
 
-# A small, opinionated set of categories covering common range disciplines.
+# A small, opinionated set of categories covering common airsoft setups.
 # Categories are stored as plain strings so users can add their own, but these
 # are offered for autocomplete / validation and grouping.
 STANDARD_CATEGORIES = (
-    "Air Pistol",
-    "Air Rifle",
-    "Rimfire Pistol",
-    "Rimfire Rifle",
-    "Centerfire Pistol",
-    "Centerfire Rifle",
-    "Shotgun",
+    "AEG",
+    "GBB Pistol",
+    "GBB Rifle",
+    "Spring",
+    "Bolt-Action",
+    "HPA",
+    "AEP",
     "Other",
 )
 
@@ -85,8 +85,8 @@ class TargetSpec:
     ``rings`` need not be pre-sorted; they are normalised on construction so the
     highest value (innermost, smallest diameter) comes first.
 
-    ``decimal_scoring`` enables tenth-of-a-point scoring (ISSF style) for the
-    precision air disciplines.
+    ``decimal_scoring`` enables tenth-of-a-point scoring (precision style) for
+    fine practice faces.
     """
 
     name: str
@@ -220,21 +220,21 @@ class GroupStats:
 
 
 # --------------------------------------------------------------------------- #
-# Weapons
+# Tools
 # --------------------------------------------------------------------------- #
 
 @dataclass
-class Weapon:
-    """A specific firearm or airgun the shooter owns/uses."""
+class Tool:
+    """An airsoft replica (gun) the user owns or rents."""
 
     id: str
     name: str
     category: str = "Other"
-    caliber: str = ""               # free text, e.g. ".22 LR", "4.5mm", "9mm"
-    is_airgun: bool = False
-    # Projectile diameter in mm; used to give shots their physical size when
-    # scoring "edge breaks the line" and when detecting holes in images.
-    caliber_mm: Optional[float] = None
+    bb: str = ""               # free text, e.g. "6mm", "0.25g BBs"
+    is_gas: bool = False       # gas-powered (GBB / HPA) rather than AEG / spring
+    # BB diameter in mm (6 mm is typical); used to give shots their physical
+    # size when scoring "edge breaks the line" and when detecting impacts.
+    bb_mm: Optional[float] = None
     notes: str = ""
 
     def __post_init__(self) -> None:
@@ -244,14 +244,14 @@ class Weapon:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: dict) -> "Weapon":
+    def from_dict(cls, d: dict) -> "Tool":
         return cls(
             id=d["id"],
             name=d["name"],
             category=d.get("category", "Other"),
-            caliber=d.get("caliber", ""),
-            is_airgun=d.get("is_airgun", False),
-            caliber_mm=d.get("caliber_mm"),
+            bb=d.get("bb", ""),
+            is_gas=d.get("is_gas", False),
+            bb_mm=d.get("bb_mm"),
             notes=d.get("notes", ""),
         )
 
@@ -262,21 +262,21 @@ class Weapon:
 
 @dataclass
 class Session:
-    """One analysed target: shots fired with a weapon on a given day.
+    """One analysed target: shots fired with a tool on a given day.
 
     A session is the unit of progress tracking.  It stores the raw shots, the
-    computed :class:`GroupStats`, and the context (weapon, date, distance) used
+    computed :class:`GroupStats`, and the context (tool, date, distance) used
     to aggregate progress later.
     """
 
     id: str
-    weapon_id: str
+    tool_id: str
     date: str                       # ISO date, e.g. "2026-05-29"
     shots: List[Shot] = field(default_factory=list)
     stats: Optional[GroupStats] = None
     distance_m: Optional[float] = None
     target_name: str = ""
-    ammo: str = ""
+    bbs: str = ""
     image_path: str = ""            # source still image (may be bulky)
     video_path: str = ""            # source video (may be bulky)
     notes: str = ""
@@ -299,13 +299,13 @@ class Session:
     def to_dict(self) -> dict:
         return {
             "id": self.id,
-            "weapon_id": self.weapon_id,
+            "tool_id": self.tool_id,
             "date": self.date,
             "shots": [s.to_dict() for s in self.shots],
             "stats": self.stats.to_dict() if self.stats else None,
             "distance_m": self.distance_m,
             "target_name": self.target_name,
-            "ammo": self.ammo,
+            "bbs": self.bbs,
             "image_path": self.image_path,
             "video_path": self.video_path,
             "notes": self.notes,
@@ -317,13 +317,13 @@ class Session:
     def from_dict(cls, d: dict) -> "Session":
         return cls(
             id=d["id"],
-            weapon_id=d["weapon_id"],
+            tool_id=d["tool_id"],
             date=d["date"],
             shots=[Shot.from_dict(s) for s in d.get("shots", [])],
             stats=GroupStats.from_dict(d["stats"]) if d.get("stats") else None,
             distance_m=d.get("distance_m"),
             target_name=d.get("target_name", ""),
-            ammo=d.get("ammo", ""),
+            bbs=d.get("bbs", ""),
             image_path=d.get("image_path", ""),
             video_path=d.get("video_path", ""),
             notes=d.get("notes", ""),

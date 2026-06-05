@@ -1,12 +1,12 @@
 [project]
 name = "marksman"
 version = "0.1.0"
-description = "Progress tracker for shooting sports: analyzes marked-up target images (shot groupings) and tracks progress overall, by weapon category, and by specific weapon."
+description = "Progress tracker for airsoft marksmanship: analyzes marked-up target images (shot groupings) and tracks progress overall, by tool category, and by specific tool."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "Adam Erik Eryavec" }]
-keywords = ["marksmanship", "shooting-sports", "target", "grouping", "cli", "image-analysis"]
+keywords = ["airsoft", "marksmanship", "target", "grouping", "cli", "image-analysis"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",

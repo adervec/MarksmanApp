@@ -9,7 +9,7 @@ Two detection modes:
 
 * ``"marker"`` -- the shooter has dotted/circled each shot with a coloured pen
   (red by default).  Robust and the recommended workflow.
-* ``"holes"``  -- detect dark bullet holes directly.  Works on clean scans of
+* ``"holes"``  -- detect dark impact marks directly.  Works on clean scans of
   light targets; less reliable on busy photos.
 
 Calibration (pixels -> millimetres) can be supplied directly, derived from the

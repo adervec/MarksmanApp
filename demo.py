@@ -3,7 +3,7 @@
 
 Synthesises two marked-up target images (red dots where shots landed), runs the
 real image-analysis pipeline on them, scores them, stores them as dated
-sessions for one weapon, and prints the progress report -- proving the whole
+sessions for one tool, and prints the progress report -- proving the whole
 core feature works with zero third-party dependencies.
 
     python demo.py
@@ -14,13 +14,13 @@ import tempfile
 
 from marksman import imageio, vision
 from marksman.grouping import analyze_group
-from marksman.models import Weapon, Session
+from marksman.models import Tool, Session
 from marksman.storage import Database
 from marksman.targets import get_target
 from marksman import tracker, report
 
 
-FACE_MM = 170.0          # ISSF 10m air pistol face is ~170 mm across
+FACE_MM = 400.0          # "Airsoft Practice 10m" face is ~400 mm across
 IMG_PX = 700             # rendered image width/height in pixels
 DOT_R = 4                # radius (px) of each red marker dot
 MM_PER_PX = FACE_MM / IMG_PX
@@ -53,16 +53,16 @@ def _disk(img, cx, cy, r, color):
                     img.set(x, y, *color)
 
 
-def analyse_and_store(db, weapon, date, shots_mm, target, path):
+def analyse_and_store(db, tool, date, shots_mm, target, path):
     render_target(shots_mm, path)
     result = vision.analyze_image(
         path, mode="marker", color="red",
         center_px=CENTER, mm_per_px=MM_PER_PX,
     )
     stats = analyze_group(result.shots, target=target,
-                          caliber_mm=weapon.caliber_mm or 0.0)
+                          bb_mm=tool.bb_mm or 0.0)
     session = Session(
-        id=date, weapon_id=weapon.id, date=date, shots=result.shots,
+        id=date, tool_id=tool.id, date=date, shots=result.shots,
         stats=stats, distance_m=10.0, target_name=target.name, image_path=path,
     )
     db.add_session(session)
@@ -76,19 +76,19 @@ def analyse_and_store(db, weapon, date, shots_mm, target, path):
 def main():
     workdir = tempfile.mkdtemp(prefix="marksman_demo_")
     db = Database(path=os.path.join(workdir, "demo_data.json"))
-    weapon = Weapon(id="ap1", name="Walther LP500", category="Air Pistol",
-                    caliber="4.5mm", is_airgun=True, caliber_mm=4.5)
-    db.add_weapon(weapon)
-    target = get_target("ISSF 10m Air Pistol")
+    tool = Tool(id="aeg1", name="Training AEG", category="AEG",
+                    bb="6mm", is_gas=False, bb_mm=6.0)
+    db.add_tool(tool)
+    target = get_target("Airsoft Practice 10m")
 
-    # Session 1: a loose, high-right group (early days) -- ~17 mm, off-centre.
-    s1 = [(8, 12), (15, 6), (4, 18), (12, 14), (18, 9)]
-    # Session 2, weeks later: tighter (~10 mm) and well centred (improvement!).
-    s2 = [(0, 5), (5, 0), (0, -5), (-5, 0), (0, 0)]
+    # Session 1: a loose, high-right group (early days) -- ~70 mm, off-centre.
+    s1 = [(28, 42), (52, 21), (14, 63), (42, 49), (63, 31)]
+    # Session 2, weeks later: tighter (~40 mm) and well centred (improvement!).
+    s2 = [(0, 18), (18, 0), (0, -18), (-18, 0), (0, 0)]
 
-    analyse_and_store(db, weapon, "2026-03-01", s1, target,
+    analyse_and_store(db, tool, "2026-03-01", s1, target,
                       os.path.join(workdir, "session1.png"))
-    analyse_and_store(db, weapon, "2026-04-15", s2, target,
+    analyse_and_store(db, tool, "2026-04-15", s2, target,
                       os.path.join(workdir, "session2.png"))
     db.save()
 
@@ -99,7 +99,7 @@ def main():
     print(report.format_progress(tracker.progress_overall(db.all_sessions()),
                                  show_sessions=True))
     print()
-    for rep in tracker.progress_by_weapon(db.all_sessions(), db.weapons).values():
+    for rep in tracker.progress_by_tool(db.all_sessions(), db.tools).values():
         print(report.format_progress(rep))
     print()
     print("Data saved at: %s" % db.path)
