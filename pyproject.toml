@@ -6,6 +6,21 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "Adam Erik Eryavec" }]
+keywords = ["marksmanship", "shooting-sports", "target", "grouping", "cli", "image-analysis"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Games/Entertainment",
+]
 
 # The ENTIRE app -- grouping maths, scoring, tracking, storage, the PNG-based
 # image analysis, and the CLI -- uses only the Python standard library, so it
@@ -20,6 +35,11 @@ dev = ["pytest>=7.0"]
 
 [project.scripts]
 marksman = "marksman.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/adervec/MarksmanApp"
+Repository = "https://github.com/adervec/MarksmanApp"
+Issues = "https://github.com/adervec/MarksmanApp/issues"
 
 [build-system]
 requires = ["setuptools>=61.0"]

@@ -2,10 +2,8 @@
 
 A skin is a palette of ANSI colours plus a few texture choices (the sparkline
 ramp, the horizontal-rule character, a marker glyph) that give the reports a
-distinct look.  The set is inspired by the *vibe* of the best-selling console
-first-person shooters since 2001 -- Call of Duty, Battlefield, Halo, Doom,
-Destiny, Borderlands, Counter-Strike, Overwatch, Apex Legends, Far Cry -- using
-original, trademark-free names and no game assets.
+distinct look.  Each skin has an original name and its own colour palette and
+texture; there are no third-party names, marks, or assets.
 
 Everything here is pure standard library.  Colours are emitted as 256-colour
 SGR sequences and are written *only* when output is going to a capable terminal
@@ -140,7 +138,7 @@ class Painter:
 # The skins
 # --------------------------------------------------------------------------- #
 #
-# 256-colour indices are chosen to evoke each franchise's signature HUD/palette.
+# 256-colour indices are chosen to give each skin a distinct HUD-like palette.
 # Ramps are ASCII-only for maximum portability (Windows code pages included).
 
 _THEME_LIST: List[Theme] = [
@@ -153,7 +151,7 @@ _THEME_LIST: List[Theme] = [
     ),
     Theme(
         key="recon", title="Night Recon",
-        inspired_by="Call of Duty: Modern Warfare -- night-vision phosphor & amber",
+        inspired_by="night-vision phosphor green and amber",
         c_title=fg(46, bold=True), c_rule=fg(28), c_label=fg(108),
         c_value=fg(231, bold=True), c_unit=fg(65), c_accent=fg(208),
         c_good=fg(46), c_bad=fg(196), c_muted=fg(240),
@@ -161,7 +159,7 @@ _THEME_LIST: List[Theme] = [
     ),
     Theme(
         key="orbital", title="Orbital",
-        inspired_by="Halo -- UNSC blue HUD with Spartan green & holo-amber",
+        inspired_by="blue HUD with green and holographic amber",
         c_title=fg(45, bold=True), c_rule=fg(39), c_label=fg(110),
         c_value=fg(231, bold=True), c_unit=fg(109), c_accent=fg(220),
         c_good=fg(82), c_bad=fg(203), c_muted=fg(244),
@@ -169,7 +167,7 @@ _THEME_LIST: List[Theme] = [
     ),
     Theme(
         key="inferno", title="Inferno",
-        inspired_by="Doom -- molten blood-red and hellfire orange",
+        inspired_by="molten blood-red and hellfire orange",
         c_title=fg(196, bold=True), c_rule=fg(88), c_label=fg(173),
         c_value=fg(231, bold=True), c_unit=fg(130), c_accent=fg(208),
         c_good=fg(214), c_bad=fg(124), c_muted=fg(240),
@@ -177,7 +175,7 @@ _THEME_LIST: List[Theme] = [
     ),
     Theme(
         key="frontline", title="Frontline",
-        inspired_by="Battlefield -- steel-blue smoke cut with dog-tag orange",
+        inspired_by="steel-blue smoke cut with dog-tag orange",
         c_title=fg(208, bold=True), c_rule=fg(66), c_label=fg(110),
         c_value=fg(231, bold=True), c_unit=fg(109), c_accent=fg(39),
         c_good=fg(78), c_bad=fg(203), c_muted=fg(244),
@@ -185,7 +183,7 @@ _THEME_LIST: List[Theme] = [
     ),
     Theme(
         key="lightfall", title="Light & Dark",
-        inspired_by="Destiny -- Guardian purple lit by golden Light",
+        inspired_by="deep purple lit by golden light",
         c_title=fg(141, bold=True), c_rule=fg(99), c_label=fg(146),
         c_value=fg(231, bold=True), c_unit=fg(103), c_accent=fg(220),
         c_good=fg(220), c_bad=fg(168), c_muted=fg(244),
@@ -193,7 +191,7 @@ _THEME_LIST: List[Theme] = [
     ),
     Theme(
         key="pandora", title="Cel-Shade",
-        inspired_by="Borderlands -- bold comic yellow with inky outlines",
+        inspired_by="bold comic yellow with inky outlines",
         c_title=fg(226, bold=True), c_rule=fg(130), c_label=fg(178),
         c_value=fg(231, bold=True), c_unit=fg(136), c_accent=fg(208),
         c_good=fg(190), c_bad=fg(160), c_muted=fg(240),
@@ -201,7 +199,7 @@ _THEME_LIST: List[Theme] = [
     ),
     Theme(
         key="dust", title="Dust",
-        inspired_by="Counter-Strike -- desert sand versus counter-terrorist blue",
+        inspired_by="desert sand versus a cool tactical blue",
         c_title=fg(222, bold=True), c_rule=fg(137), c_label=fg(180),
         c_value=fg(231, bold=True), c_unit=fg(144), c_accent=fg(39),
         c_good=fg(78), c_bad=fg(196), c_muted=fg(244),
@@ -209,7 +207,7 @@ _THEME_LIST: List[Theme] = [
     ),
     Theme(
         key="overdrive", title="Overdrive",
-        inspired_by="Overwatch -- vibrant orange energy over bright cyan",
+        inspired_by="vibrant orange energy over bright cyan",
         c_title=fg(208, bold=True), c_rule=fg(45), c_label=fg(75),
         c_value=fg(231, bold=True), c_unit=fg(80), c_accent=fg(51),
         c_good=fg(48), c_bad=fg(205), c_muted=fg(245),
@@ -217,7 +215,7 @@ _THEME_LIST: List[Theme] = [
     ),
     Theme(
         key="dropzone", title="Drop Zone",
-        inspired_by="Apex Legends / battle royale -- crimson on gunmetal slate",
+        inspired_by="crimson on gunmetal slate",
         c_title=fg(197, bold=True), c_rule=fg(240), c_label=fg(250),
         c_value=fg(231, bold=True), c_unit=fg(245), c_accent=fg(203),
         c_good=fg(84), c_bad=fg(124), c_muted=fg(240),
@@ -225,7 +223,7 @@ _THEME_LIST: List[Theme] = [
     ),
     Theme(
         key="tropic", title="Far Outpost",
-        inspired_by="Far Cry -- lush tropical teal under a sunset orange",
+        inspired_by="lush tropical teal under a sunset orange",
         c_title=fg(214, bold=True), c_rule=fg(29), c_label=fg(108),
         c_value=fg(231, bold=True), c_unit=fg(72), c_accent=fg(43),
         c_good=fg(41), c_bad=fg(167), c_muted=fg(244),

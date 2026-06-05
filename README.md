@@ -12,6 +12,13 @@ It is pure Python standard library: **no third-party packages required**
 (works on Python 3.9+). Image analysis reads PNG out of the box; if Pillow
 happens to be installed, JPEG and other formats work too.
 
+> ⚠️ **Disclaimer — please read.** Marksman is a hobby project by a software
+> developer — **not** a firearms instructor, coach, doctor, or lawyer. It
+> computes metrics for **personal progress tracking only**; it is **not**
+> coaching, safety, medical, or legal advice, and **not** an official scoring
+> system. Always follow safe firearm handling and your local laws. Provided
+> "as is", with no warranty. Full text: **[DISCLAIMER.md](DISCLAIMER.md)**.
+
 ## What it measures
 
 From a set of shots it computes the standard measures used to judge a group:
@@ -91,23 +98,22 @@ each hole is the most reliable). Then:
 ## Skins
 
 The reports can wear a **skin** — a colour palette plus a little texture
-(sparkline ramp, rule character, marker glyph). The set is inspired by the
-*vibe* of the best-selling console first-person shooters since 2001, using
-original names and no game assets:
+(sparkline ramp, rule character, marker glyph). Every skin is an original name
+with its own palette; pick whichever mood you like:
 
-| Skin | Vibe it nods to |
+| Skin | Palette / vibe |
 |---|---|
 | `mono` | A clean printed score card — no colour (the default). |
-| `recon` | **Call of Duty: Modern Warfare** — night-vision phosphor & amber. |
-| `orbital` | **Halo** — UNSC blue HUD with Spartan green and holo-amber. |
-| `inferno` | **Doom** — molten blood-red and hellfire orange. |
-| `frontline` | **Battlefield** — steel-blue smoke cut with dog-tag orange. |
-| `lightfall` | **Destiny** — Guardian purple lit by golden Light. |
-| `pandora` | **Borderlands** — bold comic yellow with inky outlines. |
-| `dust` | **Counter-Strike** — desert sand versus counter-terrorist blue. |
-| `overdrive` | **Overwatch** — vibrant orange energy over bright cyan. |
-| `dropzone` | **Apex Legends** / battle royale — crimson on gunmetal slate. |
-| `tropic` | **Far Cry** — lush tropical teal under a sunset orange. |
+| `recon` | Night-vision phosphor green & amber. |
+| `orbital` | Blue HUD with green and holographic amber. |
+| `inferno` | Molten blood-red and hellfire orange. |
+| `frontline` | Steel-blue smoke cut with dog-tag orange. |
+| `lightfall` | Deep purple lit by golden light. |
+| `pandora` | Bold comic yellow with inky outlines. |
+| `dust` | Desert sand versus a cool tactical blue. |
+| `overdrive` | Vibrant orange energy over bright cyan. |
+| `dropzone` | Crimson on gunmetal slate. |
+| `tropic` | Lush tropical teal under a sunset orange. |
 
 ```bash
 marksman theme                    # list skins (current one marked)
@@ -191,3 +197,23 @@ print(stats.extreme_spread_mm, stats.total_score)
 Ring dimensions follow published ISSF/NRA nominals and are intended for
 personal progress tracking, not official scoring. For matches, use the
 official scored target.
+
+## License
+
+Released under the [MIT License](LICENSE) — free to use, modify, and
+redistribute with attribution, no warranty. © 2026 Adam Erik Eryavec. This is a
+non-commercial hobby project; see **[GOING_PUBLIC.md](GOING_PUBLIC.md)** for the
+public-release plan and checklist.
+
+## Disclaimer
+
+Marksman is **not** professional coaching, medical, safety, or legal advice, and
+**not** an official scoring system. Firearm safety and legal compliance are your
+responsibility. Full text: **[DISCLAIMER.md](DISCLAIMER.md)**.
+
+## Trademarks & third-party references
+
+Organization, target, and discipline names (e.g. ISSF, NRA, IPSC) are trademarks
+of their respective owners, used here only descriptively — no affiliation or
+endorsement is implied. Marksman bundles no third-party code or assets; see
+**[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)**.

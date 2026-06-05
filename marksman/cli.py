@@ -343,7 +343,7 @@ def cmd_theme_list(args: argparse.Namespace) -> int:
         sys.stdout, no_color=getattr(args, "no_color", False))
     head = _make_painter(args, db)
     print(head.title("Marksman skins")
-          + head.muted("  (inspired by the best-selling console shooters)"))
+          + head.muted("  (each an original palette and texture)"))
     print()
     demo = [9.0, 8.0, 8.0, 6.0, 5.0, 4.0, 4.0, 3.0]
     for th in theme_mod.list_themes():
