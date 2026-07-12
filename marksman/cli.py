@@ -37,6 +37,10 @@ from . import tracker
 from . import report
 from . import render as render_mod
 from . import theme as theme_mod
+from . import coach as coach_mod
+from . import exporter
+from . import logo as logo_mod
+from . import goals as goals_mod
 from .theme import Painter
 
 
@@ -577,6 +581,225 @@ def cmd_cleanup(args: argparse.Namespace) -> int:
 
 
 # --------------------------------------------------------------------------- #
+# AI coach (cowork folder handshake)
+# --------------------------------------------------------------------------- #
+
+def _now_iso() -> str:
+    from datetime import datetime
+    return datetime.now().isoformat(timespec="seconds")
+
+
+def cmd_coach(args: argparse.Namespace) -> int:
+    action = getattr(args, "coach_action", None)
+    if action == "export":
+        return cmd_coach_export(args)
+    if action == "apply":
+        return cmd_coach_apply(args)
+    return cmd_coach_show(args)
+
+
+def cmd_coach_export(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    p = _make_painter(args, db)
+    if not any(s.stats for s in db.all_sessions()):
+        print("No analysed sessions yet - run 'marksman analyze' first.",
+              file=sys.stderr)
+        return 1
+    out_dir = args.out or coach_mod.coach_dir(db)
+    instruction = args.instruction or coach_mod.DEFAULT_INSTRUCTION
+    paths = coach_mod.write_request(db, out_dir, instruction, _now_iso())
+    print(p.good("Wrote coach request to ") + p.value(out_dir))
+    for label in ("request", "digest", "brief"):
+        print(p.muted("  - ") + p.value(paths[label]))
+    print()
+    print(p.label("Next: ") + p.muted("point a Claude Code agent at that folder "
+          "(it reads ") + p.value("CLAUDE.md")
+          + p.muted("), or paste ") + p.value("request.md")
+          + p.muted(" into any Claude chat."))
+    print(p.muted("Then drop its ") + p.value("reply.json")
+          + p.muted(" in the folder and run ") + p.value("marksman coach apply")
+          + p.muted("."))
+    return 0
+
+
+def cmd_coach_apply(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    p = _make_painter(args, db)
+    path = args.file or os.path.join(args.out or coach_mod.coach_dir(db), "reply.json")
+    if not os.path.isfile(path):
+        print("error: no reply at %s. Export first, let an agent answer, then "
+              "apply." % path, file=sys.stderr)
+        return 2
+    try:
+        reply = coach_mod.read_reply(path)
+    except Exception as e:
+        print("error: could not parse reply %s: %s" % (path, e), file=sys.stderr)
+        return 2
+    summary = coach_mod.apply_reply(db, reply, _now_iso())
+    if not summary.get("applied"):
+        print(p.muted("Nothing to apply: %s." % summary.get("reason", "no change")))
+        return 0
+    db.save()
+    print(p.good("Applied coaching from ") + p.value(path))
+    print(p.muted("  %d drill(s), %d tool tip(s), %d note(s) stored."
+                  % (summary["drills"], summary["toolTips"], summary["notes"])))
+    print()
+    print(p.label("Focus: ") + p.value(summary["focus"] or "(none given)"))
+    print(p.muted("See it any time with ") + p.value("marksman coach show") + p.muted("."))
+    return 0
+
+
+def cmd_coach_show(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    p = _make_painter(args, db)
+    c = db.settings.get("coaching")
+    if not c:
+        print("No coaching yet. Run 'marksman coach export', have a Claude agent "
+              "answer, then 'marksman coach apply'.")
+        return 0
+    print(p.title("Coach") + p.muted("  (applied %s)" % c.get("appliedAt", "?")))
+    if c.get("focus"):
+        print()
+        print(p.accent("Focus: ") + p.value(c["focus"]))
+    if c.get("analysis"):
+        print()
+        print(p.label("Analysis"))
+        print(c["analysis"])
+    if c.get("drills"):
+        print()
+        print(p.label("Drills"))
+        for d in c["drills"]:
+            print("  " + p.value(d.get("name", "drill")) + p.muted(" - "
+                  + d.get("why", "")))
+            if d.get("how"):
+                print(p.muted("      " + d["how"]))
+    if c.get("toolTips"):
+        print()
+        print(p.label("Tool tips"))
+        for t in c["toolTips"]:
+            w = db.get_tool(t.get("toolId", ""))
+            name = w.name if w else t.get("toolId", "")
+            print("  " + p.value("%s: " % name) + p.muted(t.get("tip", "")))
+    return 0
+
+
+# --------------------------------------------------------------------------- #
+# Goals
+# --------------------------------------------------------------------------- #
+
+def cmd_goal(args: argparse.Namespace) -> int:
+    action = getattr(args, "goal_action", None)
+    if action == "set":
+        return cmd_goal_set(args)
+    if action == "rm":
+        return cmd_goal_rm(args)
+    return cmd_goal_list(args)
+
+
+def cmd_goal_set(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    p = _make_painter(args, db)
+    tool_id = None
+    if args.tool:
+        tool = db.find_tool(args.tool)
+        if tool is None:
+            print("error: no tool matching %r." % args.tool, file=sys.stderr)
+            return 2
+        tool_id = tool.id
+    try:
+        goal = goals_mod.new_goal(args.metric, args.target, tool_id, args.note or "")
+    except ValueError as e:
+        print("error: %s" % e, file=sys.stderr)
+        return 2
+    db.settings.setdefault("goals", []).append(goal)
+    db.save()
+    key, unit, lower = goals_mod.METRICS[goal["metric"]]
+    scope = db.get_tool(tool_id).name if tool_id else "overall"
+    print(p.good("Goal ") + p.value(goal["id"]) + p.good(" set: ")
+          + p.label("%s %s %g %s" % (goal["metric"], "<=" if lower else ">=",
+                                     goal["target"], unit))
+          + p.muted(" (%s)" % scope))
+    return 0
+
+
+def cmd_goal_rm(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    p = _make_painter(args, db)
+    goals = db.settings.get("goals", [])
+    kept = [g for g in goals if g["id"] != args.id]
+    if len(kept) == len(goals):
+        print("error: no goal with id %r (list with 'marksman goal')." % args.id,
+              file=sys.stderr)
+        return 2
+    db.settings["goals"] = kept
+    db.save()
+    print(p.good("Removed goal ") + p.value(args.id) + p.good("."))
+    return 0
+
+
+def cmd_goal_list(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    p = _make_painter(args, db)
+    rows = goals_mod.summary(db)
+    if not rows:
+        print("No goals yet. Set one with: "
+              "marksman goal set --metric group_size --target 30 [--tool aeg1]")
+        return 0
+    print(p.title("%-8s %-14s %-8s %-16s %-9s %s"
+                  % ("ID", "METRIC", "TARGET", "SCOPE", "BEST", "STATUS")))
+    for r in rows:
+        cmp = "<=" if r["lowerIsBetter"] else ">="
+        target = "%g %s" % (r["target"], r["unit"])
+        best = "-" if r["best"] is None else ("%.1f" % r["best"])
+        if r["met"] is None:
+            status = p.muted("no data")
+        elif r["met"]:
+            status = p.good("met")
+        else:
+            status = p.bad("working")
+        print(p.value("%-8s" % r["id"]) + " " + p.label("%-14s" % r["metric"])
+              + " " + p.muted("%-2s" % cmp) + p.value("%-6s" % ("%g" % r["target"]))
+              + " " + p.muted("%-16.16s" % r["scope"])
+              + " " + p.value("%-9s" % best) + " " + status)
+    print()
+    print(p.muted("Metrics: ") + p.value(", ".join(goals_mod.METRICS)))
+    return 0
+
+
+# --------------------------------------------------------------------------- #
+# Export
+# --------------------------------------------------------------------------- #
+
+def cmd_export(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    text = exporter.to_json(db) if args.format == "json" else exporter.to_csv(db)
+    if args.out:
+        with open(args.out, "w", encoding="utf-8", newline="") as fh:
+            fh.write(text)
+        p = _make_painter(args, db)
+        n = len(exporter.session_rows(db))
+        print(p.good("Exported ") + p.value("%d session(s)" % n)
+              + p.good(" to ") + p.value(args.out))
+    else:
+        sys.stdout.write(text)
+    return 0
+
+
+# --------------------------------------------------------------------------- #
+# Logo / icon
+# --------------------------------------------------------------------------- #
+
+def cmd_logo(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    p = _make_painter(args, db)
+    png_path, ico_path = logo_mod.save_logo(args.out, size=args.size)
+    print(p.good("Wrote logo ") + p.value(png_path)
+          + p.muted(" (%dpx)" % args.size))
+    print(p.good("Wrote icon ") + p.value(ico_path) + p.muted(" (256px)"))
+    return 0
+
+
+# --------------------------------------------------------------------------- #
 # Argument parser
 # --------------------------------------------------------------------------- #
 
@@ -667,6 +890,52 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("sessions", help="list saved sessions")
     sp.set_defaults(func=cmd_sessions)
 
+    # coach (AI cowork folder handshake)
+    chp = sub.add_parser("coach",
+                         help="AI coaching via a cowork folder (no API key needed)")
+    chp.set_defaults(func=cmd_coach)
+    chsub = chp.add_subparsers(dest="coach_action")
+    che = chsub.add_parser("export",
+                           help="write a coach request folder for a Claude agent")
+    che.add_argument("--out", help="folder (default: 'coach/' beside the DB)")
+    che.add_argument("--instruction", help="override the coaching task text")
+    che.set_defaults(func=cmd_coach_export)
+    cha = chsub.add_parser("apply", help="ingest an agent's reply.json")
+    cha.add_argument("--file", help="reply file (default: <folder>/reply.json)")
+    cha.add_argument("--out", help="coach folder (default: 'coach/' beside the DB)")
+    cha.set_defaults(func=cmd_coach_apply)
+    chs = chsub.add_parser("show", help="show the latest applied coaching")
+    chs.set_defaults(func=cmd_coach_show)
+
+    # export (CSV/JSON for spreadsheets / backups)
+    ep = sub.add_parser("export", help="export sessions as CSV or JSON")
+    ep.add_argument("--format", choices=["csv", "json"], default="csv")
+    ep.add_argument("--out", help="output file (default: write to stdout)")
+    ep.set_defaults(func=cmd_export)
+
+    # goals (a target for one metric, overall or per tool)
+    gp = sub.add_parser("goal", help="set and track practice goals")
+    gp.set_defaults(func=cmd_goal)
+    gsub = gp.add_subparsers(dest="goal_action")
+    gs = gsub.add_parser("set", help="set a goal")
+    gs.add_argument("--metric", required=True, choices=list(goals_mod.METRICS),
+                    help="metric to target")
+    gs.add_argument("--target", required=True, type=float, help="target value")
+    gs.add_argument("--tool", help="scope to one tool (default: overall)")
+    gs.add_argument("--note", default="")
+    gs.set_defaults(func=cmd_goal_set)
+    gr = gsub.add_parser("rm", help="remove a goal by id")
+    gr.add_argument("id")
+    gr.set_defaults(func=cmd_goal_rm)
+    gl = gsub.add_parser("list", help="list goals and progress")
+    gl.set_defaults(func=cmd_goal_list)
+
+    # logo (generate the app icon)
+    lp = sub.add_parser("logo", help="generate the Marksman logo PNG + .ico")
+    lp.add_argument("--out", default="assets", help="output folder (default: assets)")
+    lp.add_argument("--size", type=int, default=512, help="PNG size in px")
+    lp.set_defaults(func=cmd_logo)
+
     # render (graphical recreations from stored shot data)
     rp = sub.add_parser("render",
                         help="redraw target diagrams from stored shot data")
@@ -707,6 +976,14 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
+    # AI-authored coaching text can carry unicode a legacy Windows console
+    # (cp1252) can't encode; replace instead of crashing. ponytail: no-op on
+    # UTF-8/redirected output and on test StringIO doubles (no reconfigure).
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(errors="replace")
+        except Exception:
+            pass
     parser = build_parser()
     args = parser.parse_args(argv)
     return args.func(args)

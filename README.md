@@ -1,5 +1,7 @@
 # Marksman
 
+<img src="assets/marksman.png" alt="Marksman logo" width="128" align="right">
+
 [![CI](https://github.com/adervec/MarksmanApp/actions/workflows/ci.yml/badge.svg)](https://github.com/adervec/MarksmanApp/actions/workflows/ci.yml)
 
 A progress tracker for **airsoft** — AEGs, gas blowback (GBB) pistols and
@@ -36,16 +38,29 @@ Group size is also reported as an **angle** (mrad / MOA) using the distance, and
 score as a **percentage of maximum**, so sessions at different distances and on
 different target faces can be compared on equal terms.
 
-## Install (optional)
+## Install
 
-It runs straight from the source tree — no install needed. To get the
-`marksman` command on your PATH:
+It runs straight from the source tree — no install needed. To get a `marksman`
+command on your PATH, pick one:
 
+```bash
+pipx install .        # isolated, recommended
+pip install --user .  # or into your user site-packages
+pip install -e .      # editable (for hacking on it)
 ```
-pip install -e .
+
+Once installed, run `marksman ...`; without installing, `python -m marksman ...`
+works from the source tree. (`python -m marksman.cli ...` also still works.)
+
+**Windows one-click:** `install.ps1` installs the command, generates the icon,
+and adds a Start Menu launch shortcut (add `-Desktop` for a desktop one too):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-Otherwise call it as a module: `python -m marksman.cli ...`
+Your data lives in a single `marksman_data.json` (the shortcut opens in
+`%USERPROFILE%\Marksman`).
 
 ## Quick start
 
@@ -95,6 +110,57 @@ the most reliable). Then:
   mm"` (two points a known distance apart), or `--face-width MM` (the image
   spans a target face that wide). If you pass a `--target`, its known face
   width is used as a fallback.
+
+## AI coach (cowork folder)
+
+Marksman can hand your progress to an AI coach through a **folder** — no API key,
+no network calls from the app. It writes a request folder; a
+[Claude Code](https://claude.com/claude-code) agent (or any Claude chat) reads it
+and writes back a `reply.json`; you pull that reply back in.
+
+```bash
+marksman coach export        # writes coach/ : request.json, request.md, CLAUDE.md
+# → point a Claude Code agent at coach/ (it reads CLAUDE.md), or paste
+#   coach/request.md into any Claude chat. It saves coach/reply.json.
+marksman coach apply         # ingest the reply: analysis, a focus, drills, tips
+marksman coach show          # read the latest coaching any time
+```
+
+The request bundles the full progress dataset — group sizes (mm and mrad), score
+%, zero error, per-tool and per-category trends, recent sessions and your current
+practice **streak** — so the coaching is grounded in your actual numbers. It is
+practice feedback only, never coaching-certification, medical, or safety advice.
+
+## Goals
+
+Set a target for one metric — overall or for a specific tool — and track it. A
+goal is "met" once your **best** session for that scope crosses the target.
+
+```bash
+marksman goal set --metric group_size --target 30 --tool aeg1   # <= 30 mm group
+marksman goal set --metric score --target 80                    # >= 80% overall
+marksman goal list                                              # progress + status
+marksman goal rm <id>
+```
+
+Metrics: `group_size`, `group_mrad`, `mean_radius`, `zero_error`, `score`. Any
+goals you set ride along in the coach export, so the AI coach steers its focus
+toward what you're chasing.
+
+## Export your data
+
+```bash
+marksman export --format csv --out sessions.csv   # one row per session
+marksman export --format json                     # to stdout (pipe it)
+```
+
+## Logo / icon
+
+Regenerate the app icon any time (pure Python — no image libraries):
+
+```bash
+marksman logo --out assets --size 512   # → assets/marksman.png + marksman.ico
+```
 
 ## Skins
 
