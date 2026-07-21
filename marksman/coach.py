@@ -41,7 +41,10 @@ DEFAULT_INSTRUCTION = (
     "return: a short analysis of the trend (what's improving, what's stalling), the "
     "single most important FOCUS for the next session, 3-6 concrete dry/live drills, "
     "and a per-tool tip where the data warrants one. If the dataset has a `goals` "
-    "list, note progress toward each and let it steer the focus. Ground every claim in "
+    "list, note progress toward each and let it steer the focus. `drills` holds the "
+    "named drills with tiered standards, what tier they've reached, and which ones the "
+    "app suggests next -- prefer recommending those by name over inventing new ones. "
+    "Ground every claim in "
     "the numbers (group size in mm and mrad, score %, zero error, streak). Be encouraging "
     "and specific; this is practice feedback, not coaching certification or safety "
     "instruction -- never weaken the eye-protection / field-rules disclaimers."
@@ -159,7 +162,20 @@ def build_dataset(db: Database, days: int = 120,
         "byCategory": {cat: r.to_dict()
                        for cat, r in tracker.progress_by_category(sessions, db.tools).items()},
         "recentSessions": _recent_rows(db),
+        "drills": _drill_rows(db, today),
         **({"goals": goal_rows} if goal_rows else {}),
+    }
+
+
+def _drill_rows(db: Database, today: date) -> Dict[str, Any]:
+    """Drill standings plus what the adaptive plan would pick next."""
+    from . import drills as drills_mod            # local: drills imports goals
+    return {
+        "tiers": list(drills_mod.TIERS),
+        "points": drills_mod.tier_points(db),
+        "standings": [r for r in drills_mod.standings(db) if r["attempts"]],
+        "suggested": [{"id": r["id"], "name": r["name"], "reason": r["reason"]}
+                      for r in drills_mod.plan(db, 3, today=today)],
     }
 
 

@@ -277,6 +277,7 @@ class Session:
     distance_m: Optional[float] = None
     target_name: str = ""
     bbs: str = ""
+    drill_id: str = ""              # the named drill this session was, if any
     image_path: str = ""            # source still image (may be bulky)
     video_path: str = ""            # source video (may be bulky)
     notes: str = ""
@@ -306,6 +307,7 @@ class Session:
             "distance_m": self.distance_m,
             "target_name": self.target_name,
             "bbs": self.bbs,
+            "drill_id": self.drill_id,
             "image_path": self.image_path,
             "video_path": self.video_path,
             "notes": self.notes,
@@ -324,6 +326,7 @@ class Session:
             distance_m=d.get("distance_m"),
             target_name=d.get("target_name", ""),
             bbs=d.get("bbs", ""),
+            drill_id=d.get("drill_id", ""),
             image_path=d.get("image_path", ""),
             video_path=d.get("video_path", ""),
             notes=d.get("notes", ""),

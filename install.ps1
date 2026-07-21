@@ -36,13 +36,29 @@ Push-Location $dataDir
 try { Invoke-Expression "$launch --no-color logo --out `"$dataDir\assets`"" } finally { Pop-Location }
 $ico = Join-Path $dataDir "assets\marksman.ico"
 
+# The shortcut opens the GUI. Prefer pythonw.exe so no console window flashes
+# up behind it: first the one beside the installed command (pipx's venv), then
+# whatever pythonw is on PATH. If there is none, fall back to a console launch.
+$scripts = if ($exe) { Split-Path $exe } else { $null }
+$pythonw = $null
+if ($scripts -and (Test-Path (Join-Path $scripts "pythonw.exe"))) {
+    $pythonw = Join-Path $scripts "pythonw.exe"
+} else {
+    $pythonw = (Get-Command pythonw -ErrorAction SilentlyContinue).Source
+}
+
 function New-MarksmanShortcut($path) {
     $ws = New-Object -ComObject WScript.Shell
     $sc = $ws.CreateShortcut($path)
-    $sc.TargetPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
-    $sc.Arguments = "-NoExit -Command `"$launch --help`""
+    if ($pythonw) {
+        $sc.TargetPath = $pythonw
+        $sc.Arguments = "-m marksman gui"
+    } else {
+        $sc.TargetPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
+        $sc.Arguments = "-Command `"$launch gui`""
+    }
     $sc.WorkingDirectory = $dataDir
-    $sc.Description = "Marksman - airsoft marksmanship tracker"
+    $sc.Description = "Marksman - airsoft marksmanship drills and progress"
     if (Test-Path $ico) { $sc.IconLocation = $ico }
     $sc.Save()
     Write-Host "  shortcut: $path" -ForegroundColor Green
@@ -55,5 +71,6 @@ if ($Desktop) {
 }
 
 Write-Host ""
-Write-Host "Done. Launch from the Start Menu (search 'Marksman'), or run 'marksman --help'." -ForegroundColor Cyan
+Write-Host "Done. Launch from the Start Menu (search 'Marksman') to open the app," -ForegroundColor Cyan
+Write-Host "or run 'marksman --help' for the command line." -ForegroundColor Cyan
 Write-Host "Your data lives in $dataDir" -ForegroundColor DarkGray

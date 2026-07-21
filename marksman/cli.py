@@ -41,6 +41,7 @@ from . import coach as coach_mod
 from . import exporter
 from . import logo as logo_mod
 from . import goals as goals_mod
+from . import drills as drills_mod
 from .theme import Painter
 
 
@@ -167,6 +168,20 @@ def cmd_analyze(args: argparse.Namespace) -> int:
               % args.tool, file=sys.stderr)
         return 2
 
+    # A named drill supplies its own distance and target face unless overridden,
+    # so `--drill group-10` is enough to log a standards attempt.
+    drill = None
+    if getattr(args, "drill", None):
+        try:
+            drill = drills_mod.get_drill(args.drill)
+        except KeyError as e:
+            print("error: %s" % e, file=sys.stderr)
+            return 2
+        if args.distance is None:
+            args.distance = drill["distance_m"]
+        if not args.target:
+            args.target = drill["target"]
+
     target = None  # type: Optional[TargetSpec]
     if args.target:
         try:
@@ -241,6 +256,7 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         distance_m=args.distance,
         target_name=target.name if target else "",
         bbs=args.bbs or "",
+        drill_id=drill["id"] if drill else "",
         image_path=image_path,
         video_path=args.video or "",
         notes=args.notes or "",
@@ -260,7 +276,30 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         print(p.good("Saved session ") + p.value(session.id)
               + p.muted(" (%d for this tool)."
                         % len(db.sessions_for_tool(tool.id))))
+        if drill is not None:
+            _print_drill_result(p, db, drill)
     return 0
+
+
+def _print_drill_result(p: Painter, db: Database, drill: dict) -> None:
+    """After logging a drill attempt: the tier it earned and the next rung."""
+    row = drills_mod.standing(db, drill)
+    print()
+    print(p.label("Drill : ") + p.value(drill["name"])
+          + p.muted("  (attempt %d)" % row["attempts"]))
+    if row["tier"]:
+        print(p.good("Tier  : ") + p.value(row["tier"])
+              + p.muted("  best %.1f %s" % (row["best"], row["unit"])))
+    else:
+        print(p.muted("Tier  : below %s (%s %g %s)"
+                      % (drills_mod.TIERS[0],
+                         "<=" if row["lowerIsBetter"] else ">=",
+                         drill["cutoffs"][0], row["unit"])))
+    if row["nextCutoff"] is not None:
+        print(p.label("Next  : ") + p.value(row["nextTier"])
+              + p.muted(" at %s%g %s"
+                        % ("<=" if row["lowerIsBetter"] else ">=",
+                           row["nextCutoff"], row["unit"])))
 
 
 def cmd_progress(args: argparse.Namespace) -> int:
@@ -786,6 +825,136 @@ def cmd_export(args: argparse.Namespace) -> int:
 
 
 # --------------------------------------------------------------------------- #
+# Drills
+# --------------------------------------------------------------------------- #
+
+def cmd_drill(args: argparse.Namespace) -> int:
+    action = getattr(args, "drill_action", None)
+    if action == "show":
+        return cmd_drill_show(args)
+    if action == "plan":
+        return cmd_drill_plan(args)
+    return cmd_drill_list(args)
+
+
+def _tier_paint(p: Painter, tier) -> str:
+    if tier is None:
+        return p.muted("%-9s" % "-")
+    return (p.good if tier == drills_mod.TIERS[-1] else p.value)("%-9s" % tier)
+
+
+def cmd_drill_list(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    p = _make_painter(args, db)
+    rows = drills_mod.standings(db)
+    if getattr(args, "family", None):
+        want = args.family.strip().lower()
+        rows = [r for r in rows if r["family"].lower() == want]
+        if not rows:
+            print("error: no drills in family %r (families: %s)."
+                  % (args.family, ", ".join(drills_mod.families())), file=sys.stderr)
+            return 2
+    print(p.title("%-16s %-13s %-12s %-8s %-9s %-14s %s"
+                  % ("ID", "FAMILY", "METRIC", "BEST", "TIER", "NEXT", "TRIES")))
+    for r in rows:
+        nxt = ("-" if not r["nextTier"]
+               else "%s %g" % (r["nextTier"], r["nextCutoff"]))
+        best = "-" if r["best"] is None else "%.1f" % r["best"]
+        print(p.value("%-16s" % r["id"]) + " " + p.muted("%-13.13s" % r["family"])
+              + " " + p.label("%-12.12s" % r["metric"])
+              + " " + p.value("%-8s" % best) + " " + _tier_paint(p, r["tier"])
+              + " " + p.muted("%-14.14s" % nxt) + " " + p.value(str(r["attempts"])))
+    pts = drills_mod.tier_points(db)
+    print()
+    print(p.label("Tiers earned: ") + p.value("%d/%d" % (pts["earned"], pts["possible"]))
+          + p.muted("  across %d/%d drills tried"
+                    % (pts["drillsAttempted"], pts["drillsTotal"])))
+    print(p.muted("Details: ") + p.value("marksman drill show <id>")
+          + p.muted("   Today's picks: ") + p.value("marksman drill plan"))
+    return 0
+
+
+def cmd_drill_show(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    p = _make_painter(args, db)
+    try:
+        d = drills_mod.get_drill(args.id)
+    except KeyError as e:
+        print("error: %s" % e, file=sys.stderr)
+        return 2
+    r = drills_mod.standing(db, d)
+    print(p.title(d["name"]) + p.muted("  [%s]" % d["id"]))
+    print(p.muted("%s  |  %g m  |  %d shots  |  %s"
+                  % (d["family"], d["distance_m"], d["shots"], d["target"])))
+    print()
+    print(d["why"])
+    print()
+    print(p.label("How to run it"))
+    for step in d["how"]:
+        print(p.muted("  - ") + step)
+    print()
+    print(p.label("Cues"))
+    for cue in d["cues"]:
+        print(p.muted("  - ") + cue)
+    print()
+    print(p.label("Standards ") + p.muted("(%s, %s)" % (r["metric"], r["unit"])))
+    for tier, cutoff in zip(drills_mod.TIERS, d["cutoffs"]):
+        earned = bool(r["tier"]) and \
+            drills_mod.TIERS.index(r["tier"]) >= drills_mod.TIERS.index(tier)
+        mark = p.good("[x] ") if earned else p.muted("[ ] ")
+        print("  " + mark + p.value("%-9s" % tier)
+              + p.muted("%s " % ("<=" if r["lowerIsBetter"] else ">="))
+              + p.value("%g" % cutoff))
+    print()
+    if r["attempts"]:
+        print(p.label("Your standing: ") + p.value("%d attempt(s)" % r["attempts"])
+              + p.muted(", best ") + p.value("%.1f" % r["best"])
+              + p.muted(", latest ") + p.value("%.1f" % r["latest"])
+              + p.muted(", trend ") + p.trend(r["direction"], r["direction"]))
+    else:
+        print(p.muted("Not attempted yet."))
+    print(p.muted("Log it with: ") + p.value(
+        "marksman analyze --tool <id> --drill %s --distance %g --target %r ..."
+        % (d["id"], d["distance_m"], d["target"])))
+    return 0
+
+
+def cmd_drill_plan(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    p = _make_painter(args, db)
+    rows = drills_mod.plan(db, count=args.count)
+    print(p.title("Today's plan") + p.muted("  (adaptive: untried, close to the "
+                                            "next tier, or overdue)"))
+    print()
+    for i, r in enumerate(rows, 1):
+        d = drills_mod.get_drill(r["id"])
+        print(p.accent(" %d. " % i) + p.value(r["name"])
+              + p.muted("  [%s]" % r["id"]))
+        print(p.muted("     %s  |  %g m  |  %d shots  |  %s"
+                      % (d["family"], d["distance_m"], d["shots"], d["target"])))
+        print(p.muted("     why: ") + p.label(r["reason"])
+              + p.muted("   tier: ") + (r["tier"] or "-"))
+    print()
+    print(p.muted("Full catalogue: ") + p.value("marksman drill"))
+    return 0
+
+
+# --------------------------------------------------------------------------- #
+# GUI
+# --------------------------------------------------------------------------- #
+
+def cmd_gui(args: argparse.Namespace) -> int:
+    try:
+        from . import gui as gui_mod
+    except ImportError as e:      # tkinter absent (some Linux distros ship it apart)
+        print("error: the GUI needs tkinter, which this Python doesn't have (%s).\n"
+              "       Install it (e.g. 'sudo apt install python3-tk') or use the "
+              "CLI." % e, file=sys.stderr)
+        return 1
+    return gui_mod.launch(args.db, getattr(args, "theme", None))
+
+
+# --------------------------------------------------------------------------- #
 # Logo / icon
 # --------------------------------------------------------------------------- #
 
@@ -845,6 +1014,9 @@ def build_parser() -> argparse.ArgumentParser:
     ap = sub.add_parser("analyze", help="analyse a target (image or coordinates)")
     ap.add_argument("--tool", required=True, help="tool id or name")
     ap.add_argument("--target", help="target face name (enables scoring)")
+    ap.add_argument("--drill", help="log this as a named drill attempt "
+                                    "(see 'marksman drill'); supplies the "
+                                    "distance and target face")
     ap.add_argument("--distance", type=float, help="distance in metres")
     ap.add_argument("--date", help="ISO date (default: today)")
     ap.add_argument("--bbs", default="")
@@ -929,6 +1101,25 @@ def build_parser() -> argparse.ArgumentParser:
     gr.set_defaults(func=cmd_goal_rm)
     gl = gsub.add_parser("list", help="list goals and progress")
     gl.set_defaults(func=cmd_goal_list)
+
+    # drills (named practice drills with tiered standards)
+    dp = sub.add_parser("drill", help="practice drills with tiered standards")
+    dp.add_argument("--family", help="only this family (e.g. Precision)")
+    dp.set_defaults(func=cmd_drill)
+    dsub = dp.add_subparsers(dest="drill_action")
+    dl = dsub.add_parser("list", help="list drills and your tier on each")
+    dl.add_argument("--family", help="only this family")
+    dl.set_defaults(func=cmd_drill_list)
+    ds = dsub.add_parser("show", help="how to run a drill, and its standards")
+    ds.add_argument("id", help="drill id (see 'marksman drill')")
+    ds.set_defaults(func=cmd_drill_show)
+    dpl = dsub.add_parser("plan", help="today's recommended drills")
+    dpl.add_argument("--count", type=int, default=3, help="how many (default 3)")
+    dpl.set_defaults(func=cmd_drill_plan)
+
+    # gui (desktop window)
+    up = sub.add_parser("gui", help="open the desktop app (tkinter)")
+    up.set_defaults(func=cmd_gui)
 
     # logo (generate the app icon)
     lp = sub.add_parser("logo", help="generate the Marksman logo PNG + .ico")

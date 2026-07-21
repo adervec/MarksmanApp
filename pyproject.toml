@@ -1,15 +1,18 @@
 [project]
 name = "marksman"
-version = "0.2.0"
-description = "Progress tracker for airsoft marksmanship: analyzes marked-up target images (shot groupings) and tracks progress overall, by tool category, and by specific tool."
+version = "0.3.0"
+description = "Airsoft marksmanship drills and progress tracking: tiered practice drills, target-image analysis, charts, and a desktop GUI -- all standard library."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "Adam Erik Eryavec" }]
-keywords = ["airsoft", "marksmanship", "target", "grouping", "cli", "image-analysis", "coach"]
+keywords = ["airsoft", "marksmanship", "target", "grouping", "drills", "cli", "gui", "image-analysis", "coach"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
+    "Environment :: X11 Applications",
+    "Environment :: Win32 (MS Windows)",
+    "Environment :: Console",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
@@ -35,6 +38,11 @@ dev = ["pytest>=7.0"]
 
 [project.scripts]
 marksman = "marksman.cli:main"
+
+# Windowed entry point: on Windows this gets a pythonw launcher, so the desktop
+# app opens without a console window behind it.
+[project.gui-scripts]
+marksman-gui = "marksman.gui:launch"
 
 [project.urls]
 Homepage = "https://github.com/adervec/MarksmanApp"

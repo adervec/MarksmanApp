@@ -16,7 +16,11 @@ Layers (lowest to highest):
 * :mod:`marksman.tracker`   -- aggregate sessions into progress reports.
 * :mod:`marksman.render`    -- redraw a result diagram from stored shot data.
 * :mod:`marksman.theme`     -- visual "skins" for the terminal reports.
+* :mod:`marksman.drills`    -- named practice drills with tiered standards.
+* :mod:`marksman.goals`     -- user-set targets for a single metric.
+* :mod:`marksman.coach`     -- the AI coach cowork folder (no network calls).
 * :mod:`marksman.cli`       -- command line entry point.
+* :mod:`marksman.gui`       -- the desktop app (tkinter).
 
 Every layer is standard-library only -- there are no third-party dependencies.
 """
@@ -50,4 +54,4 @@ __all__ = [
     "list_themes",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.3.0"
