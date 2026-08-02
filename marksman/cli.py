@@ -954,6 +954,11 @@ def cmd_gui(args: argparse.Namespace) -> int:
     return gui_mod.launch(args.db, getattr(args, "theme", None))
 
 
+def cmd_web(args: argparse.Namespace) -> int:
+    from . import web as web_mod
+    return web_mod.serve(args.db, host=args.host, port=args.port)
+
+
 # --------------------------------------------------------------------------- #
 # Logo / icon
 # --------------------------------------------------------------------------- #
@@ -1120,6 +1125,14 @@ def build_parser() -> argparse.ArgumentParser:
     # gui (desktop window)
     up = sub.add_parser("gui", help="open the desktop app (tkinter)")
     up.set_defaults(func=cmd_gui)
+
+    # web (phone / browser app on the LAN)
+    wb = sub.add_parser("web", help="serve the app to your phone's browser "
+                                    "(same Wi-Fi)")
+    wb.add_argument("--host", default="", help="bind address (default: all "
+                                               "interfaces)")
+    wb.add_argument("--port", type=int, default=8317, help="port (default 8317)")
+    wb.set_defaults(func=cmd_web)
 
     # logo (generate the app icon)
     lp = sub.add_parser("logo", help="generate the Marksman logo PNG + .ico")

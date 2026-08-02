@@ -21,6 +21,7 @@ Layers (lowest to highest):
 * :mod:`marksman.coach`     -- the AI coach cowork folder (no network calls).
 * :mod:`marksman.cli`       -- command line entry point.
 * :mod:`marksman.gui`       -- the desktop app (tkinter).
+* :mod:`marksman.web`       -- the phone/browser app served on your LAN.
 
 Every layer is standard-library only -- there are no third-party dependencies.
 """
@@ -54,4 +55,4 @@ __all__ = [
     "list_themes",
 ]
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"

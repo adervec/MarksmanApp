@@ -9,7 +9,7 @@ and rifles, spring, HPA, and bolt-action replicas. It gives you **12 named
 practice drills with four tiers each**, **analyses a marked-up image of a
 target** (the groupings of your hits) into precise marksmanship metrics, and
 **tracks your progress over time** — overall, by tool **category**, and by
-**specific tool**. Desktop app *and* full CLI.
+**specific tool**. Desktop app, **phone-friendly web app**, and full CLI.
 
 It is pure Python standard library: **no third-party packages required**
 (works on Python 3.9+). Image analysis reads PNG out of the box; if Pillow
@@ -46,6 +46,27 @@ installed:
 | **Tools** | Add and remove your replicas. |
 
 Every terminal **skin** has a matching desktop palette (**Skin** menu).
+
+## On your phone
+
+The same data in any browser on your Wi-Fi — log shots at the field by
+**tapping them onto the target face**:
+
+```bash
+marksman web          # then open the printed URL on your phone
+```
+
+<img src="assets/screenshot_phone.png" alt="The Marksman web app on a phone: tier points, today's plan and recent sessions" width="320">
+
+Four tabs: **Home** (tier points, today's plan, recent sessions), **Drills**
+(the catalogue with your standings), **Log** (tap-to-place shots with live
+group stats, drill prefill, add-a-tool) and **Sessions**. Served by the
+standard library's `http.server` — still zero dependencies, and it works in a
+desktop browser too.
+
+The printed URL carries a one-run access code, so only someone with the full
+link can view or add sessions. It is meant for your home network — **don't
+port-forward it to the internet.**
 
 ## What it measures
 
