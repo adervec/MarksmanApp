@@ -64,6 +64,10 @@ group stats, drill prefill, add-a-tool) and **Sessions**. Served by the
 standard library's `http.server` — still zero dependencies, and it works in a
 desktop browser too.
 
+The header's orientation toggle (**auto / portrait / landscape**) locks the
+layout by *setting*, not by how the phone happens to be tilted — handy when
+the phone is lying flat next to the target.
+
 The printed URL carries a one-run access code, so only someone with the full
 link can view or add sessions. It is meant for your home network — **don't
 port-forward it to the internet.**

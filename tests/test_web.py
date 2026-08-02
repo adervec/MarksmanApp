@@ -73,6 +73,12 @@ class TestWeb(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn(b"MARKSMAN", raw)
 
+    def test_page_has_the_orientation_setting(self):
+        # Orientation is controlled by a saved setting, not the accelerometer.
+        _, raw = self._call("/")
+        for needle in (b'id="orient"', b"mk_orient", b"rotcw", b"rotccw"):
+            self.assertIn(needle, raw)
+
     def test_state(self):
         status, s = self._json("/api/state")
         self.assertEqual(status, 200)

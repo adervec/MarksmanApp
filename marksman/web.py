@@ -395,8 +395,17 @@ PAGE = r"""<!DOCTYPE html>
 :root{--bg:#12161a;--card:#1b2127;--line:#2a323b;--fg:#e8e6e1;--mut:#8a949e;
       --acc:#e8b34b;--good:#7fc97f;--bad:#e06c60;--field:#12171c}
 *{box-sizing:border-box;margin:0}
-body{background:var(--bg);color:var(--fg);padding-bottom:70px;
+body{background:var(--bg);color:var(--fg);
      font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+#scroll{padding-bottom:70px}
+/* Orientation forced by the user's setting, not the accelerometer: when the
+   device disagrees, the whole app is rotated 90 degrees via CSS. */
+body.rotcw,body.rotccw{overflow:hidden}
+body.rotcw #rot,body.rotccw #rot{position:fixed;width:100vh;height:100vw;
+    transform-origin:top left;background:var(--bg)}
+body.rotcw #rot{top:0;left:100vw;transform:rotate(90deg)}
+body.rotccw #rot{top:100vh;left:0;transform:rotate(-90deg)}
+body.rotcw #scroll,body.rotccw #scroll{height:100%;overflow-y:auto}
 header{position:sticky;top:0;z-index:2;background:var(--bg);padding:12px 16px;
        border-bottom:1px solid var(--line);display:flex;justify-content:space-between;
        align-items:baseline}
@@ -434,13 +443,19 @@ nav button.on{color:var(--acc);font-weight:700}
 #toast{position:fixed;left:50%;transform:translateX(-50%);top:14px;z-index:9;
   background:var(--acc);color:#14181c;font-weight:700;border-radius:8px;
   padding:10px 16px;display:none;max-width:90%}
+#orient{background:none;border:1px solid var(--line);color:var(--mut);
+  border-radius:6px;padding:4px 9px;font-size:12px}
+.hright{display:flex;gap:10px;align-items:center}
 ul{padding-left:20px;font-size:14px}li{margin:3px 0}
 a{color:var(--acc)}
 </style>
 </head>
 <body>
-<div id="toast"></div>
-<header><b>MARKSMAN</b><span id="points" class="muted"></span></header>
+<div id="rot">
+<div id="scroll">
+<header><b>MARKSMAN</b><span class="hright">
+  <button id="orient" title="lock the layout portrait or landscape">auto</button>
+  <span id="points" class="muted"></span></span></header>
 <main>
 
 <section id="home" class="on">
@@ -484,12 +499,15 @@ a{color:var(--acc)}
 <section id="sessions"><div id="sessList" class="card"></div></section>
 
 </main>
+</div>
+<div id="toast"></div>
 <nav>
   <button data-t="home" class="on">Home</button>
   <button data-t="drills">Drills</button>
   <button data-t="log">Log</button>
   <button data-t="sessions">Sessions</button>
 </nav>
+</div>
 
 <script>
 "use strict";
@@ -734,10 +752,12 @@ async function refreshShots(){
 $("cv").addEventListener("pointerdown", e => {
   if (!curTarget) return;
   e.preventDefault();
-  const r = e.currentTarget.getBoundingClientRect();
-  const k = curTarget.face_mm / r.width;
-  const x = (e.clientX - r.left - r.width / 2) * k;
-  const y = (r.height / 2 - (e.clientY - r.top)) * k;
+  // offsetX/Y are in the element's own coordinate space, so they stay
+  // correct when the whole app is CSS-rotated by the orientation setting.
+  const el = e.currentTarget;
+  const k = curTarget.face_mm / el.clientWidth;
+  const x = (e.offsetX - el.clientWidth / 2) * k;
+  const y = (el.clientHeight / 2 - e.offsetY) * k;
   shots.push({x_mm: +x.toFixed(1), y_mm: +y.toFixed(1)});
   refreshShots();
 });
@@ -749,7 +769,29 @@ $("target").onchange = () => {
   refreshShots();
 };
 $("dist").onchange = refreshShots;
-window.addEventListener("resize", drawTarget);
+
+// Orientation: a saved setting decides the layout; the accelerometer doesn't.
+// "auto" follows the device; "portrait"/"landscape" hold that layout and
+// counter-rotate the app when the device is turned the other way.
+const ORIENTS = ["auto", "portrait", "landscape"];
+let orient = localStorage.getItem("mk_orient") || "auto";
+if (ORIENTS.indexOf(orient) < 0) orient = "auto";
+function applyOrient(){
+  const deviceLandscape = window.innerWidth > window.innerHeight;
+  document.body.classList.remove("rotcw", "rotccw");
+  if (orient === "landscape" && !deviceLandscape) document.body.classList.add("rotcw");
+  else if (orient === "portrait" && deviceLandscape) document.body.classList.add("rotccw");
+  $("orient").textContent = orient;
+  drawTarget();
+}
+$("orient").onclick = () => {
+  orient = ORIENTS[(ORIENTS.indexOf(orient) + 1) % ORIENTS.length];
+  localStorage.setItem("mk_orient", orient);
+  applyOrient();
+  toast("Orientation: " + orient);
+};
+window.addEventListener("resize", applyOrient);
+applyOrient();
 
 $("addTool").onclick = async () => {
   const name = prompt("Tool name (e.g. 'Training AEG'):");
