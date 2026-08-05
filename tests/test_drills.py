@@ -9,7 +9,7 @@ from marksman.storage import Database
 
 def _db():
     db = Database()
-    db.add_tool(Tool("aeg1", "Training AEG", category="AEG", bb_mm=6.0))
+    db.add_tool(Tool("aeg1", "Training AEG", category="AEG", projectile_mm=6.0))
     return db
 
 

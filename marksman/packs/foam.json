@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "id": "foam",
+  "name": "Foam Dart Blasters",
+  "version": "1.0.0",
+  "author": "Marksman",
+  "description": "Drills for foam dart blasters -- the toy kind, indoors or in the garden. Distances and standards are sized for the wide spread a foam dart actually gives, so progress shows up instead of drowning in noise.",
+  "sensitivity": 1,
+  "safety": "Foam darts still sting an eye. Wear eye protection, aim only at targets, and never at people or animals who haven't agreed to play.",
+  "terms": {
+    "tool": "blaster",
+    "tools": "blasters",
+    "projectile": "dart",
+    "projectiles": "darts"
+  },
+  "categories": ["Springer", "Flywheel", "Pump-Action", "Motorised", "Blowgun"],
+  "projectile_mm": 13.0,
+  "targets": [
+    {
+      "name": "Foam Practice 5m",
+      "ten_ring_mm": 100.0,
+      "ring_step_mm": 45.0,
+      "face_mm": 1000.0,
+      "rings": 10,
+      "notes": "Big-ring face for foam darts at living-room and garden ranges."
+    },
+    {
+      "name": "Foam Close 3m",
+      "ten_ring_mm": 120.0,
+      "ring_step_mm": 55.0,
+      "face_mm": 1200.0,
+      "rings": 10,
+      "notes": "Close-range face for fast indoor shooting."
+    }
+  ],
+  "drills": [
+    {
+      "id": "foam-group-5",
+      "name": "Ten-Dart Group",
+      "family": "Precision",
+      "distance_m": 5.0,
+      "shots": 10,
+      "target": "Foam Practice 5m",
+      "metric": "group_size",
+      "cutoffs": [520.0, 390.0, 280.0, 190.0],
+      "why": "Foam darts scatter, so ten of them tell you far more than five. This is the headline number: how tightly one blaster and one batch of darts can be made to repeat.",
+      "how": [
+        "Rest the blaster on a table or bag so your hold isn't the variable.",
+        "Ten darts at one aiming point, at a steady pace.",
+        "Measure the extreme spread (largest centre-to-centre distance)."
+      ],
+      "cues": [
+        "Use darts of the same brand and age -- a bent tip is its own flier.",
+        "Let a flywheel blaster spin up fully before every shot.",
+        "Prime the same way every time; a half prime is a low dart."
+      ]
+    },
+    {
+      "id": "foam-zero-5",
+      "name": "Blaster Zero",
+      "family": "Zeroing",
+      "distance_m": 5.0,
+      "shots": 10,
+      "target": "Foam Practice 5m",
+      "metric": "zero_error",
+      "cutoffs": [170.0, 115.0, 70.0, 40.0],
+      "why": "Most blasters do not shoot where the sights point, and most of them lob. Zero error tells you how far the group centre sits from your aim, so you can learn the hold-over instead of guessing it.",
+      "how": [
+        "Supported, ten darts, the same aiming point every shot.",
+        "Analyse with the target's centre as the point of aim.",
+        "Note the offset and aim off by that much next time -- then re-shoot."
+      ],
+      "cues": [
+        "Darts drop fast; expect the group to sit low and learn how low.",
+        "Fresh darts fly flatter than tired ones.",
+        "Change one thing at a time, then confirm it."
+      ]
+    },
+    {
+      "id": "foam-close-3",
+      "name": "Close Quarters Score",
+      "family": "Speed",
+      "distance_m": 3.0,
+      "shots": 10,
+      "target": "Foam Close 3m",
+      "metric": "score",
+      "cutoffs": [52.0, 68.0, 81.0, 91.0],
+      "why": "Scored as a percentage of the face maximum, so it judges where the darts land rather than how tight they clump. Standing, unsupported, at the range most foam fights actually happen.",
+      "how": [
+        "Standing, unsupported, at 3 m on the close face.",
+        "Ten darts at a comfortable working pace.",
+        "Score the face; the drill tracks score as a percentage of maximum."
+      ],
+      "cues": [
+        "Sights (or the barrel) up before the shot, every time.",
+        "Speed comes from a settled stance, not a faster trigger finger.",
+        "Call the bad ones out loud before you look."
+      ]
+    },
+    {
+      "id": "foam-consistency",
+      "name": "Dart Consistency",
+      "family": "Precision",
+      "distance_m": 5.0,
+      "shots": 10,
+      "target": "Foam Practice 5m",
+      "metric": "mean_radius",
+      "cutoffs": [240.0, 175.0, 120.0, 75.0],
+      "why": "Extreme spread is decided by your two worst darts, and with foam there is always a wild one. Mean radius counts all ten, so it rewards the batch that behaves rather than the lucky pair.",
+      "how": [
+        "Ten darts, supported, one aiming point.",
+        "Inspect each dart before loading; set the bent ones aside.",
+        "Track mean radius, not the group size."
+      ],
+      "cues": [
+        "Sort your darts once and keep the good batch for drills.",
+        "Aim for boring -- every shot the same.",
+        "A dart that tumbles is a dart problem, not an aim problem."
+      ]
+    },
+    {
+      "id": "foam-distance-8",
+      "name": "Distance Test",
+      "family": "Precision",
+      "distance_m": 8.0,
+      "shots": 10,
+      "target": "Foam Practice 5m",
+      "metric": "group_mrad",
+      "cutoffs": [62.0, 46.0, 33.0, 22.0],
+      "why": "Judged as an angle, so the standard is the same at any distance. Shoot it at 5 m and at 8 m: the angle should hold. Where it balloons is where the darts run out of steam.",
+      "how": [
+        "Supported, ten darts at 8 m.",
+        "Log it with the correct distance -- the metric depends on it.",
+        "Compare the angular group with your 5 m one."
+      ],
+      "cues": [
+        "A number that doubles past 5 m usually means tired darts or a weak spring.",
+        "Wind matters outdoors, even a little; note the conditions.",
+        "Heavier or better-moulded darts hold a tighter angle."
+      ]
+    },
+    {
+      "id": "foam-cold-start",
+      "name": "Cold Start",
+      "family": "Consistency",
+      "distance_m": 5.0,
+      "shots": 10,
+      "target": "Foam Practice 5m",
+      "metric": "group_size",
+      "cutoffs": [600.0, 450.0, 330.0, 230.0],
+      "why": "Your first volley of the day, before any warm-up. The only honest measure of what you can do on demand -- and with a flywheel blaster, what it can do before the batteries are warm.",
+      "how": [
+        "First group of the session, no sighters.",
+        "Ten darts, supported, one aiming point.",
+        "Log it immediately -- no re-runs."
+      ],
+      "cues": [
+        "No warm-up, no do-overs. That's the whole drill.",
+        "Expect a gap against your warm groups; closing it is the goal.",
+        "Fresh batteries read differently from tired ones -- note them."
+      ]
+    }
+  ]
+}

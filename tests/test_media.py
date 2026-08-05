@@ -15,7 +15,7 @@ from marksman.targets import get_target
 def _session(date="2026-04-15", pts=((8, 12), (15, 6), (4, 18), (12, 14)),
              target=None, **kw):
     shots = [Shot(x, y) for x, y in pts]
-    st = analyze_group(shots, target=target, bb_mm=4.5)
+    st = analyze_group(shots, target=target, projectile_mm=4.5)
     return Session(id=date, tool_id="ap1", date=date, shots=shots, stats=st,
                    distance_m=10.0, target_name=(target.name if target else ""),
                    **kw)
@@ -96,7 +96,7 @@ class TestCleanupCli(unittest.TestCase):
         self.db_path = os.path.join(self.dir, "db.json")
         db = Database(path=self.db_path)
         db.add_tool(Tool(id="ap1", name="Training AEG",
-                             category="AEG", bb_mm=6.0))
+                             category="AEG", projectile_mm=6.0))
         self.tgt = get_target("Airsoft Practice 10m")
         self.img = os.path.join(self.dir, "s.png")
         self.vid = os.path.join(self.dir, "s.mp4")
@@ -173,7 +173,7 @@ class TestCleanupCli(unittest.TestCase):
         # A second tool/session whose media should NOT be touched by a filter.
         db = Database.load(self.db_path)
         db.add_tool(Tool(id="r1", name="Recon GBB", category="GBB Rifle",
-                             bb_mm=6.0))
+                             projectile_mm=6.0))
         other = os.path.join(self.dir, "other.png")
         with open(other, "wb") as fh:
             fh.write(b"\x00" * 10_000)

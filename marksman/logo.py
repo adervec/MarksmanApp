@@ -1,6 +1,6 @@
 """Generate the Marksman logo/app icon with the built-in PNG writer (no deps).
 
-Draws a reticle-over-target badge with a tight airsoft BB group, reusing the same
+Draws a reticle-over-target badge with a tight shot group, reusing the same
 pure-Python drawing primitives as the session recreations. Produces a PNG and a
 Windows ``.ico`` (a 256px PNG embedded in the ICO container, which Windows 10/11
 render for shortcut icons).
@@ -17,14 +17,14 @@ from typing import Tuple
 from . import imageio
 from .render import _fill_disk, _hline, _ring, _vline
 
-# Tacticool badge palette: deep navy field, neon rings, orange BB group.
+# Badge palette: deep navy field, neon rings, orange shot group.
 _BG = (16, 20, 28)
 _FACE = (24, 30, 42)
 _RING = (45, 212, 160)
 _RING_DIM = (32, 120, 96)
 _RETICLE = (226, 232, 240)
-_BB = (255, 150, 40)
-_BB_EDGE = (24, 30, 42)
+_HIT = (255, 150, 40)
+_HIT_EDGE = (24, 30, 42)
 
 
 def make_logo(size: int = 512) -> imageio.Image:
@@ -52,14 +52,14 @@ def make_logo(size: int = 512) -> imageio.Image:
         _hline(img, cy + d, cx - reach, cx - gap, _RETICLE)
         _hline(img, cy + d, cx + gap, cx + reach, _RETICLE)
 
-    # A tight BB group, high-and-right of centre (a good honest cluster).
+    # A tight group, high-and-right of centre (a good honest cluster).
     group_r = size * 0.055
     offsets = [(-0.6, -0.9), (0.7, -0.4), (-0.2, 0.5), (1.1, 0.7), (0.2, -0.1)]
     for ox, oy in offsets:
         px = int(cx + size * 0.06 + ox * group_r)
         py = int(cy - size * 0.06 + oy * group_r)
-        _fill_disk(img, px, py, group_r + max(1.5, unit * 0.5), _BB_EDGE)
-        _fill_disk(img, px, py, group_r, _BB)
+        _fill_disk(img, px, py, group_r + max(1.5, unit * 0.5), _HIT_EDGE)
+        _fill_disk(img, px, py, group_r, _HIT)
     return img
 
 

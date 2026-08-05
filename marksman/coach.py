@@ -37,7 +37,7 @@ PROTOCOL = "marksman-coach"
 PROTOCOL_VERSION = 1
 
 DEFAULT_INSTRUCTION = (
-    "Act as a supportive airsoft marksmanship coach. Read the progress dataset and "
+    "Act as a supportive marksmanship coach. Read the progress dataset and "
     "return: a short analysis of the trend (what's improving, what's stalling), the "
     "single most important FOCUS for the next session, 3-6 concrete dry/live drills, "
     "and a per-tool tip where the data warrants one. If the dataset has a `goals` "
@@ -100,7 +100,8 @@ def _tool_rows(db: Database) -> List[dict]:
     for w in sorted(db.tools.values(), key=lambda x: x.name.lower()):
         rows.append({
             "id": w.id, "name": w.name, "category": w.category,
-            "bb": w.bb, "bbMm": w.bb_mm, "gas": w.is_gas,
+            "projectile": w.projectile, "projectileMm": w.projectile_mm,
+            "powered": w.is_powered,
             "sessions": len(db.sessions_for_tool(w.id)),
             **({"notes": w.notes} if w.notes else {}),
         })
@@ -143,7 +144,7 @@ def build_dataset(db: Database, days: int = 120,
     all_dates = {s.date for s in analysed}
     goal_rows = goals_mod.summary(db)
     return {
-        "note": ("Airsoft marksmanship progress. Group sizes are in mm (and mrad, "
+        "note": ("Marksmanship progress. Group sizes are in mm (and mrad, "
                  "angular, so distances are comparable); score is % of the face max. "
                  "lower group/zero-error = better, higher score = better."),
         "windowDays": days,
@@ -194,9 +195,9 @@ def build_request(dataset: Dict[str, Any], instruction: str,
 def build_digest(dataset: Dict[str, Any], instruction: str) -> str:
     """Human-readable Markdown you can paste into any Claude chat."""
     return "\n".join([
-        "# Marksman - airsoft coaching request",
+        "# Marksman - coaching request",
         "",
-        "You are coaching an airsoft shooter from their tracked practice data.",
+        "You are coaching a shooter from their tracked practice data.",
         "",
         "## Task",
         instruction,
@@ -216,7 +217,7 @@ def build_digest(dataset: Dict[str, Any], instruction: str) -> str:
 CLAUDE_BRIEF = "\n".join([
     "# Marksman coach folder",
     "",
-    "This folder is a coaching hand-off from the **Marksman** airsoft progress",
+    "This folder is a coaching hand-off from the **Marksman** progress",
     "tracker. If you are an AI agent working in it:",
     "",
     "1. Read `request.json` (or the paste-ready `request.md`).",

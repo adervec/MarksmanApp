@@ -15,11 +15,15 @@ If the page ever outgrows a single string, move it to a package data file.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import hmac
 import json
 import math
+import os
 import secrets
 import socket
+import tempfile
 import threading
 import uuid
 from datetime import date, datetime
@@ -30,14 +34,16 @@ from urllib.parse import parse_qs, urlparse
 
 from . import drills as drills_mod
 from . import goals as goals_mod
+from . import packs as packs_mod
 from . import targets as targets_mod
 from . import tracker
 from .goals import METRICS
 from .grouping import analyze_group
-from .models import Session, Shot, Tool, TargetSpec, STANDARD_CATEGORIES
+from .models import Session, Shot, Tool, TargetSpec
 from .storage import Database, DEFAULT_DB_PATH
 
-MAX_BODY = 1_000_000        # bytes; a session is a few KB
+MAX_BODY = 30_000_000       # bytes; big enough for a phone photo, base64'd
+MAX_IMAGE = 20_000_000      # decoded image bytes
 MAX_SHOTS = 500
 DEFAULT_PORT = 8317
 
@@ -164,6 +170,11 @@ def _state(db: Database) -> Dict[str, Any]:
     } for sp in specs.values()]
 
     sessions = sorted(db.all_sessions(), key=lambda s: (s.date, s.id), reverse=True)
+    pack_rows = [{"id": p["id"], "name": p["name"], "active": p["active"],
+                  "sensitivity": p.get("sensitivity", 5), "reason": p["reason"],
+                  "drills": len(p["drills"]), "safety": p.get("safety", ""),
+                  "bundled": p.get("bundled", False)}
+                 for p in packs_mod.status(db)]
     return {
         "tools": [{"id": w.id, "name": w.name, "category": w.category}
                   for w in db.tools.values()],
@@ -173,7 +184,14 @@ def _state(db: Database) -> Dict[str, Any]:
         "tierPoints": drills_mod.tier_points(db),
         "goals": goals_mod.summary(db),
         "sessions": [_sess_row(db, s) for s in sessions[:50]],
-        "categories": list(STANDARD_CATEGORIES),
+        "categories": packs_mod.categories(db),
+        "packs": pack_rows,
+        "terms": {w: packs_mod.term(w, db) for w in ("tool", "tools",
+                                                     "projectile", "projectiles")},
+        # Photos already logged, so the Drive picker can grey them out. Derived
+        # from the sessions themselves, so it survives sync and export.
+        "imported": sorted(set(s.source_ref[6:] for s in db.all_sessions()
+                               if s.source_ref.startswith("drive:"))),
     }
 
 
@@ -220,12 +238,17 @@ def _save_session(server: ThreadingHTTPServer, body: Dict[str, Any]) -> Dict[str
             datetime.fromisoformat(day)
         except ValueError:
             raise _Bad("bad date %r (use YYYY-MM-DD)" % day)
-        stats = analyze_group(shots, target=spec, bb_mm=tool.bb_mm or 0.0)
+        source_ref = str(body.get("source_ref") or "")[:120]
+        if source_ref and not source_ref.startswith("drive:"):
+            raise _Bad("unknown source_ref")
+        stats = analyze_group(shots, target=spec,
+                              projectile_mm=tool.projectile_mm or 0.0)
         s = Session(
             id=uuid.uuid4().hex[:8], tool_id=tool.id, date=day, shots=shots,
             stats=stats, distance_m=_num(body.get("distance_m"), "distance_m"),
             target_name=spec.name if spec else "", drill_id=drill_id,
-            bbs=str(body.get("bbs") or "")[:100],
+            projectiles=str(body.get("projectiles") or "")[:100],
+            source_ref=source_ref,
             notes=str(body.get("notes") or "")[:2000],
         )
         db.add_session(s)
@@ -239,6 +262,110 @@ def _save_session(server: ThreadingHTTPServer, body: Dict[str, Any]) -> Dict[str
                     attemptTier=drills_mod.tier_for(drill, value),
                     tier=row["tier"], best=row["best"])
     return resp
+
+
+def _analyze_image(db: Database, body: Dict[str, Any]) -> Dict[str, Any]:
+    """Find the hits in an uploaded photo and return them for review.
+
+    Nothing is saved here: the shots go back to the page, land on the target
+    canvas, and the user corrects them before saving like any other session.
+    """
+    from . import vision
+
+    raw = body.get("image_b64")
+    if not isinstance(raw, str) or not raw:
+        raise _Bad("no image")
+    try:
+        data = base64.b64decode(raw, validate=True)
+    except (ValueError, binascii.Error):
+        raise _Bad("image isn't valid base64")
+    if len(data) > MAX_IMAGE:
+        raise _Bad("image is too big (max %d MB)" % (MAX_IMAGE // 1_000_000))
+
+    tname = str(body.get("target") or "")
+    spec = _target(db, tname) if tname else None
+    face = _num(body.get("face_mm"), "face_mm", 1.0, 20000.0)
+    if face is None and spec is not None:
+        face = spec.face_width_mm
+    if face is None:
+        raise _Bad("no scale: pick a target face, or give the photographed width")
+
+    suffix = ".png" if data[:8] == b"\x89PNG\r\n\x1a\n" else ".jpg"
+    fd, tmp = tempfile.mkstemp(suffix=suffix)
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(data)
+        try:
+            found = vision.analyze_image(
+                tmp, mode=str(body.get("mode") or "marker"),
+                color=str(body.get("color") or "red"),
+                face_width_mm=float(face), auto_center=True)
+        except ValueError as e:
+            raise _Bad(str(e))
+        except Exception as e:                      # unreadable / unsupported file
+            raise _Bad("couldn't read that image (%s). PNG always works; other "
+                       "formats need Pillow installed." % e.__class__.__name__)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+
+    return {
+        "shots": [{"x_mm": round(s.x_mm, 2), "y_mm": round(s.y_mm, 2)}
+                  for s in found.shots],
+        "mm_per_px": found.mm_per_px,
+        "size_px": list(found.image_size_px),
+    }
+
+
+def _bundle(db: Database) -> Dict[str, Any]:
+    """The whole dataset in the shape that gets synced to Drive."""
+    return {
+        "app": "marksman", "version": 1,
+        "tools": [t.to_dict() for t in db.tools.values()],
+        "sessions": [s.to_dict() for s in db.sessions.values()],
+        "settings": db.settings,
+    }
+
+
+def _sync(server: ThreadingHTTPServer, body: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge a bundle pulled from Drive, and hand back the merged result.
+
+    ponytail: union by id, local wins ties -- sessions are append-only in
+    practice, so there is nothing to reconcile field by field. Add per-record
+    timestamps and tombstones if editing on two devices ever becomes a thing.
+    """
+    remote = body.get("remote")
+    if remote is not None and not isinstance(remote, dict):
+        raise _Bad("remote bundle should be an object")
+    if isinstance(remote, dict) and remote.get("app") not in (None, "marksman"):
+        raise _Bad("that file isn't a Marksman backup")
+
+    added_tools = added_sessions = 0
+    with server.lock:
+        db = Database.load(server.db_path)
+        if isinstance(remote, dict):
+            for td in remote.get("tools", []):
+                try:
+                    tool = Tool.from_dict(td)
+                except (KeyError, TypeError):
+                    continue
+                if tool.id not in db.tools:
+                    db.tools[tool.id] = tool
+                    added_tools += 1
+            for sd in remote.get("sessions", []):
+                try:
+                    sess = Session.from_dict(sd)
+                except (KeyError, TypeError):
+                    continue
+                if sess.id not in db.sessions and sess.tool_id in db.tools:
+                    db.sessions[sess.id] = sess
+                    added_sessions += 1
+            if added_tools or added_sessions:
+                db.save()
+        merged = _bundle(db)
+    return {"bundle": merged, "addedTools": added_tools,
+            "addedSessions": added_sessions,
+            "sessions": len(merged["sessions"])}
 
 
 def _add_tool(server: ThreadingHTTPServer, body: Dict[str, Any]) -> Dict[str, Any]:
@@ -323,6 +450,10 @@ class Handler(BaseHTTPRequestHandler):
                 resp = _save_session(self.server, body)
             elif path == "/api/tool":
                 resp = _add_tool(self.server, body)
+            elif path == "/api/analyze-image":
+                resp = _analyze_image(Database.load(self.server.db_path), body)
+            elif path == "/api/sync":
+                resp = _sync(self.server, body)
             else:
                 self._send(404, {"error": "not found"})
                 return
@@ -353,6 +484,7 @@ def make_server(db_path: str = DEFAULT_DB_PATH, host: str = "",
     httpd.db_path = db_path
     httpd.token = token or secrets.token_urlsafe(8)
     httpd.lock = threading.Lock()
+    packs_mod.load(Database.load(db_path))     # content: drills, faces, terms
     return httpd
 
 
@@ -448,6 +580,14 @@ nav button.on{color:var(--acc);font-weight:700}
 .hright{display:flex;gap:10px;align-items:center}
 ul{padding-left:20px;font-size:14px}li{margin:3px 0}
 a{color:var(--acc)}
+.hide{display:none}
+code{background:var(--field);padding:1px 5px;border-radius:4px;font-size:12px}
+summary{cursor:pointer}
+.filerow{width:100%;text-align:left;background:var(--card);color:var(--fg);
+  border:1px solid var(--line);margin-bottom:6px;display:flex;
+  justify-content:space-between;gap:10px;align-items:center}
+.filerow.done{color:var(--mut)}
+nav button{font-size:13px}
 </style>
 </head>
 <body>
@@ -463,6 +603,13 @@ a{color:var(--acc)}
   <h2>Today's plan</h2><div id="plan"></div>
   <div id="goalsWrap"><h2>Goals</h2><div id="goals" class="card"></div></div>
   <h2>Recent</h2><div id="recent" class="card"></div>
+  <h2>Equipment packs</h2><div id="packs" class="card"></div>
+  <div id="safety"></div>
+  <p class="muted" style="margin:14px 4px 4px">Marksman is a hobby project by a
+    software developer — not a coach, instructor, doctor or lawyer. It computes
+    metrics for personal progress tracking only. Tiers are practice standards
+    set by whoever wrote the pack, not an official classification. Obey your
+    local laws and handle whatever you own safely.</p>
 </section>
 
 <section id="drills"><div id="drillList"></div></section>
@@ -498,6 +645,56 @@ a{color:var(--acc)}
 
 <section id="sessions"><div id="sessList" class="card"></div></section>
 
+<section id="drive">
+  <h2>Sessions across devices</h2>
+  <div class="card">
+    <p class="muted">Your log syncs through a private folder only this app can
+      see. Nothing else in your Drive is touched.</p>
+    <div style="height:8px"></div>
+    <button class="btn" id="dConnect">Connect Google Drive</button>
+    <button class="btn hide" id="dSync">Sync now</button>
+    <div style="height:6px"></div>
+    <button class="ghost hide" id="dOut" style="width:100%">Sign out</button>
+    <p class="muted" id="dAcct"></p>
+    <p class="muted" id="dSyncMsg"></p>
+  </div>
+
+  <h2>Target photos</h2>
+  <div class="card">
+    <p class="muted">Photograph your targets into a Drive folder, then pull them
+      in here and let Marksman find the hits.</p>
+    <label>Folder link</label>
+    <input type="text" id="dFolder" placeholder="paste the Drive folder link">
+    <div style="height:8px"></div>
+    <div class="row">
+      <div><label>Marked with</label><select id="dMode">
+        <option value="marker">Red marker dots</option>
+        <option value="holes">Dark holes in paper</option>
+      </select></div>
+      <div><label>Face</label><select id="dTarget"></select></div>
+    </div>
+    <div style="height:10px"></div>
+    <button class="btn" id="dScan">Scan folder</button>
+    <p class="muted" id="dMsg"></p>
+  </div>
+  <div id="dList"></div>
+
+  <details class="card">
+    <summary class="muted">Not working? Use your own Google client</summary>
+    <p class="muted">Google only allows sign-in from web addresses registered
+      against a client ID. This app reuses the one from Tachyread, which is
+      registered for <code>adervec.github.io</code> and a couple of local
+      ports. If your address isn't one of them, create an OAuth client ID
+      (type: <em>Web application</em>) in the Google Cloud console, add this
+      page's address under <em>Authorized JavaScript origins</em>, and paste
+      the ID here.</p>
+    <p class="muted">This page's address is <code id="dOrigin"></code></p>
+    <input type="text" id="dClient" placeholder="....apps.googleusercontent.com">
+    <div style="height:8px"></div>
+    <button class="ghost" id="dSaveClient" style="width:100%">Save client ID</button>
+  </details>
+</section>
+
 </main>
 </div>
 <div id="toast"></div>
@@ -506,6 +703,7 @@ a{color:var(--acc)}
   <button data-t="drills">Drills</button>
   <button data-t="log">Log</button>
   <button data-t="sessions">Sessions</button>
+  <button data-t="drive">Drive</button>
 </nav>
 </div>
 
@@ -514,6 +712,9 @@ a{color:var(--acc)}
 const $ = id => document.getElementById(id);
 const TIER_COLOR = {Rookie:"#8a949e", Steady:"#6fa8dc", Sharp:"#e8b34b", Marksman:"#7fc97f"};
 let S = null, shots = [], lastStats = null, curTarget = null;
+// Set when the shots on the canvas came from a Drive photo, so the saved
+// session remembers which photo it was and the picker can grey it out.
+let driveSource = null;
 
 function el(tag, cls, text){
   const n = document.createElement(tag);
@@ -597,6 +798,34 @@ function renderHome(){
   const rec = $("recent"); rec.textContent = "";
   if (!S.sessions.length) rec.appendChild(el("div", "muted", "No sessions yet."));
   S.sessions.slice(0, 5).forEach(s => sessLine(rec, s));
+
+  const pk = $("packs"); pk.textContent = "";
+  const SENS = {1: "Toy", 2: "Sport", 3: "Regulated", 4: "Restricted", 5: "Unclassified"};
+  if (!S.packs.length) pk.appendChild(el("div", "muted",
+    "None installed — the app has no drills without one."));
+  S.packs.forEach(p => {
+    const row = el("div", "item");
+    const left = el("div");
+    left.appendChild(el("div", null, p.name + (p.bundled ? "" : " (yours)")));
+    left.appendChild(el("div", "muted",
+      p.drills + " drills · " + p.sensitivity + " " + SENS[p.sensitivity]
+      + (p.active ? "" : " · " + p.reason)));
+    row.appendChild(left);
+    row.appendChild(el("div", p.active ? "ok" : "muted", p.active ? "on" : "off"));
+    pk.appendChild(row);
+  });
+  pk.appendChild(el("div", "muted",
+    "Manage them from the terminal: marksman pack list"));
+
+  // Safety text belongs to whoever wrote the pack, so show theirs verbatim.
+  const sf = $("safety"); sf.textContent = "";
+  S.packs.filter(p => p.active && p.safety).forEach(p => {
+    const card = el("div", "card");
+    card.style.borderColor = "var(--bad)";
+    card.appendChild(el("div", null, "⚠️ " + p.name));
+    card.appendChild(el("div", "muted", p.safety));
+    sf.appendChild(card);
+  });
 }
 
 function renderDrills(){
@@ -794,9 +1023,10 @@ window.addEventListener("resize", applyOrient);
 applyOrient();
 
 $("addTool").onclick = async () => {
-  const name = prompt("Tool name (e.g. 'Training AEG'):");
+  const name = prompt("Name for this " + S.terms.tool + ":");
   if (!name) return;
-  const category = prompt("Category (" + S.categories.join(", ") + "):", "AEG") || "Other";
+  const category = prompt("Category (" + S.categories.join(", ") + "):",
+                          S.categories[0] || "Other") || "Other";
   try {
     const t = await api("/api/tool", {name: name, category: category});
     await load();
@@ -815,6 +1045,7 @@ $("save").onclick = async () => {
       tool_id: $("tool").value, drill_id: $("drill").value,
       target: $("target").value, distance_m: $("dist").value || null,
       date: $("date").value, notes: $("notes").value, shots: shots,
+      source_ref: driveSource ? "drive:" + driveSource.id : "",
     });
     if (r.drill) {
       toast(r.drill + ": " + fmt(r.value) + " " + r.unit + " — "
@@ -822,7 +1053,7 @@ $("save").onclick = async () => {
     } else {
       toast("Saved · group " + fmt(r.group_mm) + " mm");
     }
-    shots = []; lastStats = null; $("notes").value = "";
+    shots = []; lastStats = null; driveSource = null; $("notes").value = "";
     await load();
     refreshShots();
   } catch (e) {
@@ -836,17 +1067,270 @@ async function load(){
   const keepTool = $("tool").value, keepDrill = $("drill").value, keepTarget = $("target").value;
   S = await api("/api/state");
   renderHome(); renderDrills(); renderSessions(); renderLogControls();
+  fillSelect($("dTarget"), S.targets, t => t.name, t => t.name);
+  renderDriveList();
   if (keepTool) $("tool").value = keepTool;
   if (keepTarget) { $("target").value = keepTarget; curTarget = S.targets.find(t => t.name === keepTarget) || curTarget; }
   if (keepDrill) $("drill").value = keepDrill;
 }
 
+/* ---------------- Google Drive ----------------
+   Mirrors Tachyread's sync provider: a public client id (an identifier, not a
+   secret) that only works from the JavaScript origins registered with Google,
+   plus an app-side origin gate so anyone hosting this elsewhere must supply
+   their own. Tokens live in memory only and are never written down. */
+const BUILTIN_CLIENT_ID = "547617739897-br6dj2facmsc34qnkjb5u4dbfhju39pu.apps.googleusercontent.com";
+const OAUTH_ORIGINS = ["https://adervec.github.io"];
+const originAllowed = () =>
+  ["localhost", "127.0.0.1", "[::1]"].indexOf(location.hostname) >= 0 ||
+  OAUTH_ORIGINS.indexOf(location.origin) >= 0;
+
+// The app-data folder is per OAuth client, so reusing Tachyread's id means
+// sharing that space with its files. Keep this name distinct from theirs.
+const SYNC_FILE = "marksman-sessions.json";
+// Two grants, one sign-in: syncing needs only our own private folder; reading
+// a folder of your photos is a wider ask, so it's only requested when you scan.
+const SCOPE_SYNC = "openid email profile https://www.googleapis.com/auth/drive.appdata";
+const SCOPE_SCAN = SCOPE_SYNC + " https://www.googleapis.com/auth/drive.readonly";
+
+const DRIVE = Object.assign({clientId: "", folder: "", linked: false, syncedAt: 0},
+  JSON.parse(localStorage.getItem("mk-drive") || "{}"));
+const saveDrive = () => localStorage.setItem("mk-drive", JSON.stringify(DRIVE));
+const clientId = () => DRIVE.clientId.trim() || (originAllowed() ? BUILTIN_CLIENT_ID : "");
+// Takes a pasted folder link or a bare id — the id is the long token in the URL.
+const folderId = s => (String(s || "").match(/[-\w]{20,}/) || [""])[0];
+
+let tok = null, acct = null, dFiles = [], dBuf = null;
+const tokenCovers = need => !!tok && tok.exp > Date.now() + 60000 &&
+  need.split(" ").every(s => tok.scope.indexOf(s) >= 0);
+
+let gis = null;
+function loadGis(){
+  if (gis) return gis;
+  gis = new Promise((ok, no) => {
+    if (window.google && window.google.accounts && window.google.accounts.oauth2) return ok();
+    const s = document.createElement("script");
+    s.src = "https://accounts.google.com/gsi/client";
+    s.async = true;
+    s.onload = () => ok();
+    s.onerror = () => no(new Error("Couldn't load Google sign-in (no internet?)."));
+    document.head.appendChild(s);
+  });
+  return gis;
+}
+
+function requestToken(scope, prompt){
+  return new Promise((ok, no) => {
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: clientId(), scope: scope,
+      callback: r => {
+        if (r && r.access_token) {
+          tok = {value: r.access_token, scope: r.scope || scope,
+                 exp: Date.now() + ((r.expires_in || 3600) - 60) * 1000};
+          ok(tok.value);
+        } else no(new Error((r && r.error) || "Sign-in failed."));
+      },
+      // Without this a dismissed popup would leave the promise hanging forever.
+      error_callback: e => no(new Error(
+        e && e.type === "popup_closed" ? "Sign-in was dismissed." : "Sign-in failed.")),
+    });
+    client.requestAccessToken({prompt: prompt || ""});
+  });
+}
+
+async function auth(scope, opt){
+  const silent = opt && opt.silent;
+  if (!clientId())
+    throw new Error("Google sign-in isn't set up for this address — see " +
+                    "“Use your own Google client” below.");
+  if (tokenCovers(scope)) return tok.value;
+  await loadGis();
+  try {
+    return await requestToken(scope, "");       // silent, if already granted
+  } catch (e) {
+    if (silent) throw e;                        // boot/auto: never ambush
+    return await requestToken(scope, "consent");
+  }
+}
+
+async function gdrive(path, params, scope){
+  const t = await auth(scope || SCOPE_SYNC);
+  const r = await fetch("https://www.googleapis.com/drive/v3/" + path + "?" +
+                        new URLSearchParams(params),
+                        {headers: {Authorization: "Bearer " + t}});
+  if (r.status === 401 || r.status === 403) {
+    tok = null;
+    throw new Error("Drive refused access. Check the folder is in the account " +
+                    "you signed in with, then try again.");
+  }
+  if (r.status === 429) throw new Error("Google is rate-limiting; wait a moment.");
+  if (!r.ok) throw new Error("Drive returned error " + r.status + ".");
+  return r;
+}
+
+async function fetchAcct(){
+  try {
+    const r = await fetch("https://www.googleapis.com/oauth2/v3/userinfo",
+                          {headers: {Authorization: "Bearer " + tok.value}});
+    if (r.ok) { const j = await r.json(); acct = j.email || j.name || ""; }
+  } catch (e) { /* cosmetic only */ }
+}
+
+async function syncFind(){
+  const r = await gdrive("files", {
+    spaces: "appDataFolder", q: "name='" + SYNC_FILE + "' and trashed=false",
+    fields: "files(id,name,modifiedTime)",
+  });
+  const j = await r.json();
+  return (j.files && j.files[0]) || null;
+}
+
+async function syncUpload(id, bundle){
+  const meta = id ? {} : {name: SYNC_FILE, parents: ["appDataFolder"]};
+  const form = new FormData();
+  form.append("metadata", new Blob([JSON.stringify(meta)], {type: "application/json"}));
+  form.append("file", new Blob([JSON.stringify(bundle)], {type: "application/json"}));
+  const url = "https://www.googleapis.com/upload/drive/v3/files" +
+              (id ? "/" + id : "") + "?uploadType=multipart";
+  const r = await fetch(url, {method: id ? "PATCH" : "POST",
+    headers: {Authorization: "Bearer " + tok.value}, body: form});
+  if (!r.ok) throw new Error("Drive upload failed (" + r.status + ").");
+}
+
+async function driveSync(opt){
+  await auth(SCOPE_SYNC, opt);
+  if (!acct) await fetchAcct();
+  const found = await syncFind();
+  let remote = null;
+  if (found) {
+    const r = await gdrive("files/" + found.id, {alt: "media"});
+    try { remote = await r.json(); }
+    catch (e) { throw new Error("The sync file is corrupt — back up from a device that has your data."); }
+  }
+  // Python owns the merge: it holds the database and knows the record shapes.
+  const res = await api("/api/sync", {remote: remote});
+  await syncUpload(found && found.id, res.bundle);
+  DRIVE.linked = true; DRIVE.syncedAt = Date.now(); saveDrive();
+  await load();
+  return res;
+}
+
+function driveUi(msg){
+  const on = DRIVE.linked;
+  $("dConnect").classList.toggle("hide", on);
+  $("dSync").classList.toggle("hide", !on);
+  $("dOut").classList.toggle("hide", !on);
+  $("dAcct").textContent = on && acct ? "Signed in as " + acct : "";
+  $("dSyncMsg").textContent = typeof msg === "string" ? msg
+    : DRIVE.syncedAt ? "Last synced " + new Date(DRIVE.syncedAt).toLocaleString() : "";
+}
+
+async function runSync(label){
+  $("dSyncMsg").textContent = label;
+  try {
+    const r = await driveSync();
+    driveUi("Synced — " + r.sessions + " sessions" +
+            (r.addedSessions ? ", " + r.addedSessions + " pulled in" : "") + ".");
+  } catch (e) { driveUi(e.message); }
+}
+
+$("dConnect").onclick = () => runSync("Connecting…");
+$("dSync").onclick = () => runSync("Syncing…");
+$("dOut").onclick = () => {
+  tok = null; acct = null; DRIVE.linked = false; saveDrive();
+  driveUi("Signed out on this device. Your sessions stay here.");
+};
+$("dSaveClient").onclick = () => {
+  DRIVE.clientId = $("dClient").value.trim(); saveDrive(); tok = null;
+  $("dMsg").textContent = DRIVE.clientId ? "Client ID saved." : "Using the built-in client ID.";
+};
+
+function renderDriveList(){
+  const box = $("dList"); box.textContent = "";
+  const done = new Set(S ? S.imported : []);
+  dFiles.forEach((f, i) => {
+    const b = el("button", "filerow" + (done.has(f.id) ? " done" : ""));
+    b.appendChild(el("span", null, f.name));
+    b.appendChild(el("span", "muted",
+      new Date(f.createdTime).toLocaleDateString() + (done.has(f.id) ? " · logged ✓" : "")));
+    b.onclick = () => driveOpen(f);
+    box.appendChild(b);
+  });
+}
+
+$("dScan").onclick = async () => {
+  const id = folderId($("dFolder").value);
+  if (!id) { $("dMsg").textContent = "Paste the folder's link from Drive first."; return; }
+  DRIVE.folder = $("dFolder").value.trim(); saveDrive();
+  $("dMsg").textContent = "Reading folder…";
+  try {
+    await auth(SCOPE_SCAN);
+    if (tok.scope.indexOf("drive.readonly") < 0)
+      throw new Error("Google didn't grant folder access. Allow the Drive " +
+                      "permission when signing in, or use your own client ID below.");
+    const r = await gdrive("files", {
+      q: "'" + id + "' in parents and trashed=false and mimeType contains 'image/'",
+      fields: "files(id,name,mimeType,createdTime)",
+      orderBy: "createdTime desc", pageSize: "100",
+    }, SCOPE_SCAN);
+    const j = await r.json();
+    dFiles = j.files || [];
+    renderDriveList();
+    $("dMsg").textContent = dFiles.length
+      ? dFiles.length + " photo" + (dFiles.length > 1 ? "s" : "") + " — tap one to read it"
+      : "That folder has no photos in it.";
+  } catch (e) { $("dMsg").textContent = e.message; }
+};
+
+async function driveOpen(f){
+  $("dMsg").textContent = "Reading " + f.name + "…";
+  try {
+    if (!dBuf || dBuf.id !== f.id) {
+      const r = await gdrive("files/" + f.id, {alt: "media"}, SCOPE_SCAN);
+      dBuf = {id: f.id, buf: await r.arrayBuffer()};
+    }
+    let bin = "";
+    const bytes = new Uint8Array(dBuf.buf);
+    for (let i = 0; i < bytes.length; i += 8192)
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+    const face = S.targets.find(t => t.name === $("dTarget").value);
+    const res = await api("/api/analyze-image", {
+      image_b64: btoa(bin), target: $("dTarget").value,
+      mode: $("dMode").value, color: "red",
+    });
+    if (!res.shots.length) {
+      $("dMsg").textContent = "No hits found. Try the other marking style, or " +
+        "place them by hand on the Log tab.";
+      return;
+    }
+    // Straight into the normal log flow: the hits land on the target face and
+    // you correct them before saving, exactly like a hand-tapped session.
+    show("log");
+    $("target").value = $("dTarget").value;
+    curTarget = face || curTarget;
+    driveSource = {id: f.id, name: f.name};
+    const d = new Date(f.createdTime);
+    if (!isNaN(d)) $("date").value = d.toLocaleDateString("en-CA");
+    shots = res.shots;
+    await refreshShots();
+    toast("Found " + res.shots.length + " hits in " + f.name + " — check them, then save.");
+  } catch (e) { $("dMsg").textContent = e.message; }
+}
+
 function showFromHash(){
   const t = location.hash.slice(1);
-  if (["home", "drills", "log", "sessions"].indexOf(t) >= 0) show(t);
+  if (["home", "drills", "log", "sessions", "drive"].indexOf(t) >= 0) show(t);
 }
 window.addEventListener("hashchange", showFromHash);
 showFromHash();
+
+$("dOrigin").textContent = location.origin;
+$("dFolder").value = DRIVE.folder;
+$("dClient").value = DRIVE.clientId;
+driveUi();
+// Reconnect quietly if this device was linked before — never pops a sign-in.
+if (DRIVE.linked) driveSync({silent: true}).then(() => driveUi(),
+                                                 () => driveUi("Sign in again to resume syncing."));
 load().then(() => { drawTarget(); }).catch(e => toast("Load failed: " + e.message));
 </script>
 </body>

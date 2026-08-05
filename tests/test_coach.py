@@ -9,7 +9,7 @@ from marksman import coach
 
 def _db():
     db = Database()
-    db.add_tool(Tool("aeg1", "Training AEG", category="AEG", bb_mm=6.0))
+    db.add_tool(Tool("aeg1", "Training AEG", category="AEG", projectile_mm=6.0))
     for i, (d, spread) in enumerate([("2026-01-01", 60.0), ("2026-01-08", 40.0)]):
         shots = [Shot(-spread / 2, 0.0), Shot(spread / 2, 0.0)]
         db.add_session(Session("s%d" % i, "aeg1", d, shots=shots,

@@ -3,7 +3,7 @@
 Progress is reported at three scopes, as the goal requires:
 
 * **overall** -- every session,
-* **by category** -- e.g. all "AEG" sessions,
+* **by category** -- every session with tools of one category,
 * **by tool** -- a single specific replica.
 
 For each scope we summarise the key metrics with their best value, average,

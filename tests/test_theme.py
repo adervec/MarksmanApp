@@ -199,7 +199,7 @@ class TestThemeCli(unittest.TestCase):
     def test_reports_stay_plain_when_not_a_tty(self):
         # Captured output is not a terminal, so even a chosen skin stays plain.
         self.run_cli("tool", "add", "--id", "ap1", "--name", "AP",
-                     "--category", "AEG", "--bb-mm", "6.0")
+                     "--category", "AEG", "--projectile-mm", "6.0")
         code, out = self.run_cli("--theme", "inferno", "analyze", "--tool",
                                  "ap1", "--target", "Airsoft Practice 10m",
                                  "--distance", "10", "--shots", "0,0 2,0 0,2")

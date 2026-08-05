@@ -62,7 +62,7 @@ class TestScoring(unittest.TestCase):
 
     def test_bb_edge_scoring(self):
         # Shot centre at r=6, but a 4mm projectile's edge reaches r=4 -> 10.
-        self.assertEqual(score_shot(Shot(6, 0), self.tgt, bb_mm=4.0), 10.0)
+        self.assertEqual(score_shot(Shot(6, 0), self.tgt, projectile_mm=4.0), 10.0)
         # Without bb it's a 9.
         self.assertEqual(score_shot(Shot(6, 0), self.tgt), 9.0)
 

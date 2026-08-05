@@ -1,0 +1,367 @@
+{
+  "schema_version": 1,
+  "id": "airsoft",
+  "name": "Airsoft",
+  "version": "1.0.0",
+  "author": "Marksman",
+  "description": "Practice drills for airsoft replicas: AEGs, gas blowback pistols and rifles, spring, HPA and bolt-action. Ranges and standards sized for 6 mm BBs.",
+  "sensitivity": 2,
+  "safety": "Airsoft replicas fire projectiles. Always wear ANSI-rated eye protection, obey your field or site rules, never point a replica at anyone outside a controlled game, and follow your local laws on ownership and transport.",
+  "terms": {
+    "tool": "replica",
+    "tools": "replicas",
+    "projectile": "BB",
+    "projectiles": "BBs"
+  },
+  "categories": [
+    "AEG",
+    "GBB Pistol",
+    "GBB Rifle",
+    "Spring",
+    "Bolt-Action",
+    "HPA",
+    "AEP"
+  ],
+  "projectile_mm": 6.0,
+  "targets": [
+    {
+      "name": "Airsoft Practice 10m",
+      "ten_ring_mm": 40.0,
+      "ring_step_mm": 20.0,
+      "face_mm": 400.0,
+      "rings": 10,
+      "notes": "Generic 10 m practice bullseye for 6 mm BBs."
+    },
+    {
+      "name": "Airsoft CQB 7m",
+      "ten_ring_mm": 70.0,
+      "ring_step_mm": 30.0,
+      "face_mm": 600.0,
+      "rings": 10,
+      "notes": "Close-range practice face (CQB distances)."
+    },
+    {
+      "name": "Airsoft Precision 20m",
+      "ten_ring_mm": 25.0,
+      "ring_step_mm": 15.0,
+      "face_mm": 350.0,
+      "rings": 10,
+      "notes": "Tighter face for longer-range (DMR / sniper) practice."
+    }
+  ],
+  "drills": [
+    {
+      "id": "zero-10",
+      "name": "Zero Check",
+      "family": "Zeroing",
+      "distance_m": 10.0,
+      "shots": 5,
+      "target": "Airsoft Practice 10m",
+      "metric": "zero_error",
+      "cutoffs": [
+        40.0,
+        25.0,
+        15.0,
+        8.0
+      ],
+      "why": "Before anything else: is the replica actually pointing where the sights say? Zero error is how far the group centre sits from your point of aim.",
+      "how": [
+        "Rest the replica on a bag or bench so the hold isn't the variable.",
+        "Aim at the same point for all five shots -- do not chase the group.",
+        "Analyse with the target's centre as the point of aim.",
+        "Adjust sights, re-shoot, repeat until the group sits on the POA."
+      ],
+      "cues": [
+        "Same aiming point every shot, even when the group is off.",
+        "Let the hop-up settle: fire a few BBs before the scored group.",
+        "One adjustment at a time, then confirm."
+      ]
+    },
+    {
+      "id": "group-10",
+      "name": "Five-Shot Group",
+      "family": "Precision",
+      "distance_m": 10.0,
+      "shots": 5,
+      "target": "Airsoft Practice 10m",
+      "metric": "group_size",
+      "cutoffs": [
+        90.0,
+        60.0,
+        40.0,
+        25.0
+      ],
+      "why": "The headline number. Extreme spread at a fixed distance is the cleanest read on how repeatable your setup and your hold are.",
+      "how": [
+        "Supported position, five shots, one aiming point.",
+        "Fire at a relaxed, even pace -- no rushing, no long freezing.",
+        "Measure the extreme spread (largest centre-to-centre distance)."
+      ],
+      "cues": [
+        "Break the shot without disturbing the sight picture.",
+        "Consistent grip pressure beats a hard grip.",
+        "If one flier ruins it, note why rather than deleting it."
+      ]
+    },
+    {
+      "id": "mean-radius-10",
+      "name": "Mean Radius Grind",
+      "family": "Precision",
+      "distance_m": 10.0,
+      "shots": 10,
+      "target": "Airsoft Practice 10m",
+      "metric": "mean_radius",
+      "cutoffs": [
+        45.0,
+        30.0,
+        20.0,
+        12.0
+      ],
+      "why": "Extreme spread is decided by your two worst shots. Mean radius counts all ten, so it rewards consistency instead of luck.",
+      "how": [
+        "Ten shots, supported, same aiming point.",
+        "Take a breath between shots; this is a patience drill.",
+        "Track mean radius, not the group size."
+      ],
+      "cues": [
+        "Aim for boring. Every shot the same.",
+        "Ten identical shots beat eight good ones and two heroic ones."
+      ]
+    },
+    {
+      "id": "precision-20",
+      "name": "Long Precision",
+      "family": "Precision",
+      "distance_m": 20.0,
+      "shots": 5,
+      "target": "Airsoft Precision 20m",
+      "metric": "group_mrad",
+      "cutoffs": [
+        9.0,
+        6.0,
+        4.0,
+        2.5
+      ],
+      "why": "Judged in milliradians, so the standard is the same angle at any distance -- this is the drill that exposes hop-up and BB quality.",
+      "how": [
+        "Supported position at 20 m on the precision face.",
+        "Use your best BBs; weight consistency dominates at this range.",
+        "Five shots, one aiming point."
+      ],
+      "cues": [
+        "Wind matters now -- note the conditions with the session.",
+        "A vertical string is usually hop-up, not you.",
+        "Heavier BBs generally hold a tighter angle downrange."
+      ]
+    },
+    {
+      "id": "hopup-ladder",
+      "name": "Hop-Up Ladder",
+      "family": "Tuning",
+      "distance_m": 20.0,
+      "shots": 5,
+      "target": "Airsoft Precision 20m",
+      "metric": "group_size",
+      "cutoffs": [
+        140.0,
+        100.0,
+        70.0,
+        45.0
+      ],
+      "why": "Airsoft's own tuning problem: hop-up lift has to match BB weight and range. The ladder finds the setting, the group proves it.",
+      "how": [
+        "Start with the hop-up backed fully off.",
+        "Fire a group, add a small amount of hop, fire another.",
+        "Continue until BBs start to climb, then back off half a step.",
+        "Log the winning setting's group as the drill session."
+      ],
+      "cues": [
+        "Change one thing at a time: hop, then BB weight, never both.",
+        "Vertical stringing = over-hopped. Dropping fast = under-hopped.",
+        "Record the setting in the session notes -- it drifts over time."
+      ]
+    },
+    {
+      "id": "cqb-7",
+      "name": "Close Face Score",
+      "family": "Speed",
+      "distance_m": 7.0,
+      "shots": 10,
+      "target": "Airsoft CQB 7m",
+      "metric": "score",
+      "cutoffs": [
+        55.0,
+        70.0,
+        82.0,
+        92.0
+      ],
+      "why": "Scored as a percentage of the face maximum, so hits are judged on placement rather than group shape. Close range, standing, unsupported.",
+      "how": [
+        "Standing, unsupported, at 7 m on the CQB face.",
+        "Ten shots at a comfortable working pace.",
+        "Score the face; the drill tracks score as % of maximum."
+      ],
+      "cues": [
+        "Sights up before the shot, every time.",
+        "Speed comes from a settled position, not a faster trigger.",
+        "Called a bad shot? Note it -- that's the skill being trained."
+      ]
+    },
+    {
+      "id": "slow-fire-10",
+      "name": "Slow Fire Singles",
+      "family": "Fundamentals",
+      "distance_m": 10.0,
+      "shots": 10,
+      "target": "Airsoft Practice 10m",
+      "metric": "score",
+      "cutoffs": [
+        60.0,
+        75.0,
+        85.0,
+        93.0
+      ],
+      "why": "One shot at a time, no time pressure. The purest test of the fundamentals with everything else stripped away.",
+      "how": [
+        "Ten single shots, resetting your whole position between each.",
+        "Take at least fifteen seconds per shot.",
+        "Standing or kneeling -- keep it the same for every attempt."
+      ],
+      "cues": [
+        "A full reset between shots is the drill; don't shortcut it.",
+        "Stop if you start to strain -- fatigue writes bad habits.",
+        "Call each shot before you look at the target."
+      ]
+    },
+    {
+      "id": "support-side-10",
+      "name": "Support-Side Group",
+      "family": "Positional",
+      "distance_m": 10.0,
+      "shots": 5,
+      "target": "Airsoft Practice 10m",
+      "metric": "group_size",
+      "cutoffs": [
+        160.0,
+        110.0,
+        75.0,
+        50.0
+      ],
+      "why": "Your weak side has no bad habits yet -- and no good ones. It is the fastest way to find out which fundamentals you actually own.",
+      "how": [
+        "Shoulder the replica on your non-dominant side.",
+        "Five shots, supported if you need it at first.",
+        "Expect it to be bad. Track the trend, not the number."
+      ],
+      "cues": [
+        "Head position is the hard part -- move the replica, not your neck.",
+        "Standards are deliberately looser here.",
+        "Little and often beats one long painful session."
+      ]
+    },
+    {
+      "id": "kneeling-10",
+      "name": "Kneeling Group",
+      "family": "Positional",
+      "distance_m": 10.0,
+      "shots": 5,
+      "target": "Airsoft Practice 10m",
+      "metric": "group_size",
+      "cutoffs": [
+        130.0,
+        90.0,
+        60.0,
+        40.0
+      ],
+      "why": "The first position where your own wobble, not the replica, sets the group size. Bridges bench accuracy to field accuracy.",
+      "how": [
+        "Kneeling, elbow on or just forward of the knee -- never bone on bone.",
+        "Five shots at your own pace.",
+        "Rebuild the position between shots."
+      ],
+      "cues": [
+        "Bone support over muscle: settle into the position, don't hold it.",
+        "Exhale, let the wobble shrink, then break the shot.",
+        "If the wobble never settles, the position is wrong."
+      ]
+    },
+    {
+      "id": "prone-20",
+      "name": "Supported Long Group",
+      "family": "Positional",
+      "distance_m": 20.0,
+      "shots": 5,
+      "target": "Airsoft Precision 20m",
+      "metric": "group_mrad",
+      "cutoffs": [
+        11.0,
+        7.5,
+        5.0,
+        3.0
+      ],
+      "why": "Prone or fully rested at distance -- the best group your setup is capable of. Use it as the benchmark every other position is measured against.",
+      "how": [
+        "Prone or fully supported, at 20 m.",
+        "Five shots, maximum patience.",
+        "Judged angularly (mrad) so it compares with any distance."
+      ],
+      "cues": [
+        "Support the handguard, never the barrel or the hop unit.",
+        "Straight-back trigger press; this is where errors show.",
+        "Note the BB weight -- this drill is sensitive to it."
+      ]
+    },
+    {
+      "id": "distance-ladder",
+      "name": "Distance Ladder",
+      "family": "Precision",
+      "distance_m": 15.0,
+      "shots": 5,
+      "target": "Airsoft Practice 10m",
+      "metric": "group_mrad",
+      "cutoffs": [
+        10.0,
+        7.0,
+        5.0,
+        3.0
+      ],
+      "why": "Shoot the same drill at 7, 10 and 15 m and log each. Because the metric is angular, the three should read the same -- where they diverge is where your hop-up stops holding.",
+      "how": [
+        "Fire a five-shot group at 7 m, then 10 m, then 15 m.",
+        "Log each as its own session with the correct distance.",
+        "Compare the angular group sizes -- they should be close."
+      ],
+      "cues": [
+        "A number that balloons past 10 m means hop or BB weight, not aim.",
+        "Set the distances once and keep them for every attempt.",
+        "The mid distance (15 m) is the one that counts for the tier."
+      ]
+    },
+    {
+      "id": "cold-start",
+      "name": "Cold Start",
+      "family": "Consistency",
+      "distance_m": 10.0,
+      "shots": 5,
+      "target": "Airsoft Practice 10m",
+      "metric": "group_size",
+      "cutoffs": [
+        110.0,
+        75.0,
+        50.0,
+        32.0
+      ],
+      "why": "Your first group of the day, before any warm-up. It is the only honest measure of what you can do on demand.",
+      "how": [
+        "First group of the session, before any sighters.",
+        "Five shots, supported, one aiming point.",
+        "Log it immediately -- no re-runs."
+      ],
+      "cues": [
+        "No warm-up, no do-overs. That's the whole drill.",
+        "Expect a gap versus your warm groups; closing it is the goal.",
+        "Cold gas replicas will read cold too -- note the temperature."
+      ]
+    }
+  ]
+}

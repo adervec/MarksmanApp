@@ -2,16 +2,16 @@
 
 Examples
 --------
-    # Register a tool (an airsoft replica)
-    marksman tool add --id aeg1 --name "Training AEG" \
-        --category "AEG" --bb 6mm --bb-mm 6.0
+    # Register a tool -- anything that launches a projectile
+    marksman tool add --id b1 --name "Training AEG" \
+        --category "AEG" --projectile 6mm --projectile-mm 6.0
 
     # Analyse a marked-up target image (red marker dots), score it, save it
-    marksman analyze --tool aeg1 --target "Airsoft Practice 10m" --distance 10 \
+    marksman analyze --tool b1 --target "Airsoft Practice 10m" --distance 10 \
         --image shots.png --color red --auto-center
 
     # Or enter shot coordinates by hand (millimetres from point of aim)
-    marksman analyze --tool aeg1 --target "Airsoft Practice 10m" --distance 10 \
+    marksman analyze --tool b1 --target "Airsoft Practice 10m" --distance 10 \
         --shots "1.2,3.4  -2.0,5.1  0.5,-1.0"
 
     # Track progress
@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import textwrap
 import sys
 import uuid
 from typing import List, Optional, Tuple
@@ -42,6 +43,7 @@ from . import exporter
 from . import logo as logo_mod
 from . import goals as goals_mod
 from . import drills as drills_mod
+from . import packs as packs_mod
 from .theme import Painter
 
 
@@ -72,6 +74,12 @@ def _parse_rgb(text: str) -> Tuple[int, int, int]:
         raise ValueError("--rgb expects 'r,g,b'")
     r, g, b = (int(p) for p in parts)
     return (r, g, b)
+
+
+def _wrap(text: str, indent: str = "  ", width: int = 78) -> str:
+    """Wrap prose for the terminal (used for pack descriptions and warnings)."""
+    return textwrap.fill(text, width=width, initial_indent=indent,
+                         subsequent_indent=indent)
 
 
 def resolve_target(name: str, db: Database) -> TargetSpec:
@@ -113,9 +121,9 @@ def cmd_tool_add(args: argparse.Namespace) -> int:
         id=wid,
         name=args.name,
         category=args.category,
-        bb=args.bb or "",
-        is_gas=args.gas,
-        bb_mm=args.bb_mm,
+        projectile=args.projectile or "",
+        is_powered=args.is_powered,
+        projectile_mm=args.projectile_mm,
         notes=args.notes or "",
     )
     db.add_tool(tool)
@@ -130,12 +138,12 @@ def cmd_tool_list(args: argparse.Namespace) -> int:
     if not db.tools:
         print("No tools yet. Add one with: marksman tool add --name ...")
         return 0
-    print(p.title("%-12s %-28s %-18s %-10s SESSIONS"
-                  % ("ID", "NAME", "CATEGORY", "BB")))
+    print(p.title("%-12s %-28s %-18s %-12s SESSIONS"
+                  % ("ID", "NAME", "CATEGORY", "PROJECTILE")))
     for w in sorted(db.tools.values(), key=lambda x: x.name.lower()):
         n = len(db.sessions_for_tool(w.id))
         print(p.value("%-12s" % w.id) + " " + p.label("%-28s" % w.name)
-              + " " + p.muted("%-18s %-10s" % (w.category, w.bb))
+              + " " + p.muted("%-18s %-12s" % (w.category, w.projectile))
               + " " + p.value("%d" % n))
     return 0
 
@@ -243,8 +251,8 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         print("error: no shots found to analyse.", file=sys.stderr)
         return 1
 
-    bb_mm = tool.bb_mm or 0.0
-    stats = analyze_group(shots, target=target, bb_mm=bb_mm)
+    stats = analyze_group(shots, target=target,
+                          projectile_mm=tool.projectile_mm or 0.0)
 
     date = args.date or Session.today_iso()
     session = Session(
@@ -255,7 +263,7 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         stats=stats,
         distance_m=args.distance,
         target_name=target.name if target else "",
-        bbs=args.bbs or "",
+        projectiles=args.projectiles or "",
         drill_id=drill["id"] if drill else "",
         image_path=image_path,
         video_path=args.video or "",
@@ -490,7 +498,7 @@ def _recreation_path(db: Database, session: Session) -> str:
 
 def _render_one(db: Database, session: Session, path: str) -> str:
     tool = db.get_tool(session.tool_id)
-    shot_r = (tool.bb_mm / 2.0) if (tool and tool.bb_mm) else None
+    shot_r = (tool.projectile_mm / 2.0) if (tool and tool.projectile_mm) else None
     target = _session_target(session, db)
     return render_mod.save_recreation(session, path, target=target,
                                       shot_radius_mm=shot_r)
@@ -782,7 +790,7 @@ def cmd_goal_list(args: argparse.Namespace) -> int:
     rows = goals_mod.summary(db)
     if not rows:
         print("No goals yet. Set one with: "
-              "marksman goal set --metric group_size --target 30 [--tool aeg1]")
+              "marksman goal set --metric group_size --target 30 [--tool b1]")
         return 0
     print(p.title("%-8s %-14s %-8s %-16s %-9s %s"
                   % ("ID", "METRIC", "TARGET", "SCOPE", "BEST", "STATUS")))
@@ -960,6 +968,201 @@ def cmd_web(args: argparse.Namespace) -> int:
 
 
 # --------------------------------------------------------------------------- #
+# Equipment packs
+# --------------------------------------------------------------------------- #
+
+def cmd_pack(args: argparse.Namespace) -> int:
+    return cmd_pack_list(args)
+
+
+def _sens(p: Painter, level: int) -> str:
+    label = packs_mod.SENSITIVITY.get(level, ("?", ""))[0]
+    paint = p.good if level <= 2 else (p.label if level <= 3 else p.bad)
+    return paint("%d %s" % (level, label))
+
+
+def cmd_pack_list(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    p = _make_painter(args, db)
+    rows = packs_mod.status(db)
+    cfg = packs_mod.settings(db)
+    if not rows:
+        print("No packs found. Bundled packs live in %s" % packs_mod.BUNDLED_DIR)
+        return 0
+    print(p.title("Equipment packs") + p.muted("   (ceiling: sensitivity %d)"
+                                               % cfg["max_sensitivity"]))
+    print()
+    for row in rows:
+        mark = p.good("on ") if row["active"] else p.muted("off")
+        print(" " + mark + " " + p.value("%-14s" % row["id"])
+              + p.label("%-26s" % row["name"][:26])
+              + _sens(p, row.get("sensitivity", 5)))
+        detail = "%d drills, %d faces" % (len(row["drills"]), len(row["targets"]))
+        if not row["active"]:
+            detail += "  --  " + row["reason"]
+        print("    " + p.muted(detail))
+    print()
+    print(p.muted("Your packs go in: ") + p.value(packs_mod.user_dir()))
+    print(p.muted("Details: ") + p.value("marksman pack show <id>"))
+    return 0
+
+
+def cmd_pack_show(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    p = _make_painter(args, db)
+    for row in packs_mod.status(db):
+        if row["id"] != args.id.strip().lower():
+            continue
+        print(p.title(row["name"]) + p.muted("  [%s] v%s" % (row["id"], row.get("version", "?"))))
+        if row.get("error"):
+            print(p.bad("  broken: %s" % row["error"]))
+            return 1
+        print()
+        if row.get("description"):
+            print(_wrap(row["description"], indent="  "))
+            print()
+        level = row["sensitivity"]
+        name, blurb = packs_mod.SENSITIVITY[level]
+        print(p.muted("  Sensitivity: ") + _sens(p, level) + p.muted(" -- " + blurb))
+        print(p.muted("  Status:      ") + (p.good("active") if row["active"]
+                                            else p.bad(row["reason"])))
+        print(p.muted("  Source:      ") + ("bundled with the app" if row["bundled"]
+                                            else row["source"]))
+        if row.get("safety"):
+            print()
+            print(p.bad("  Safety (from the pack author)"))
+            print(_wrap(row["safety"], indent="    "))
+        if row["categories"]:
+            print()
+            print(p.muted("  Categories: ") + ", ".join(row["categories"]))
+        if row["targets"]:
+            print()
+            print(p.title("  Target faces"))
+            for t in row["targets"]:
+                print("    " + p.label("%-24s" % t["name"])
+                      + p.muted("%.0f mm ten-ring, %.0f mm face"
+                                % (t["ten_ring_mm"], t["face_mm"])))
+        if row["drills"]:
+            print()
+            print(p.title("  Drills"))
+            for d in row["drills"]:
+                print("    " + p.value("%-18s" % d["id"]) + p.label("%-24s" % d["name"])
+                      + p.muted("%g m, %d shots, %s" % (d["distance_m"], d["shots"],
+                                                        d["metric"])))
+        return 0
+    print("error: no pack %r. List them with 'marksman pack list'." % args.id,
+          file=sys.stderr)
+    return 2
+
+
+def _save_pack_cfg(db: Database, **changes) -> None:
+    cfg = db.settings.get("packs")
+    if not isinstance(cfg, dict):
+        cfg = {}
+    cfg.update(changes)
+    db.settings["packs"] = cfg
+    db.save()
+    packs_mod.reset()
+
+
+def cmd_pack_enable(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    p = _make_painter(args, db)
+    known = dict((r["id"], r) for r in packs_mod.status(db))
+    pid = args.id.strip().lower()
+    if pid not in known:
+        print("error: no pack %r." % args.id, file=sys.stderr)
+        return 2
+    cfg = packs_mod.settings(db)
+    disabled = [x for x in cfg["disabled"] if x != pid]
+    _save_pack_cfg(db, disabled=disabled)
+
+    row = known[pid]
+    if row["sensitivity"] > cfg["max_sensitivity"]:
+        print(p.bad("Switched on, but still not loading."))
+        print(p.muted("  %s declares sensitivity ") % row["name"]
+              + _sens(p, row["sensitivity"])
+              + p.muted(", above your ceiling of %d." % cfg["max_sensitivity"]))
+        print(p.muted("  Raise it deliberately with: ")
+              + p.value("marksman pack ceiling %d" % row["sensitivity"]))
+        return 0
+    print(p.good("Enabled ") + p.value(row["name"]))
+    return 0
+
+
+def cmd_pack_disable(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    p = _make_painter(args, db)
+    pid = args.id.strip().lower()
+    cfg = packs_mod.settings(db)
+    if pid not in cfg["disabled"]:
+        _save_pack_cfg(db, disabled=cfg["disabled"] + [pid])
+    print(p.good("Disabled ") + p.value(pid)
+          + p.muted(" -- its drills and faces are no longer offered."))
+    print(p.muted("Sessions you already logged against them are untouched."))
+    return 0
+
+
+def cmd_pack_ceiling(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    p = _make_painter(args, db)
+    if args.level is None:
+        cfg = packs_mod.settings(db)
+        print(p.title("Sensitivity ceiling: ") + _sens(p, cfg["max_sensitivity"]))
+        print()
+        for lvl in sorted(packs_mod.SENSITIVITY):
+            name, blurb = packs_mod.SENSITIVITY[lvl]
+            print("  " + _sens(p, lvl) + p.muted("  " + blurb))
+        print()
+        print(p.muted("Packs above the ceiling are found but not loaded."))
+        print(p.muted("Raise it with: ") + p.value("marksman pack ceiling <1-5>"))
+        return 0
+    if args.level not in packs_mod.SENSITIVITY:
+        print("error: ceiling must be 1-5.", file=sys.stderr)
+        return 2
+    _save_pack_cfg(db, max_sensitivity=args.level)
+    print(p.good("Ceiling set to ") + _sens(p, args.level))
+    if args.level >= 3:
+        print()
+        print(p.bad("You are now loading packs whose subject may be regulated "
+                    "where you live."))
+        print(_wrap(
+            "Packs are content written by whoever wrote them -- not by this app, "
+            "and not checked by it. Their drills, distances and standards are "
+            "somebody's opinion. You are responsible for obeying the law and for "
+            "handling anything you own safely.", indent="  "))
+    now = [r["name"] for r in packs_mod.status(db) if r["active"]]
+    print()
+    print(p.muted("Active packs: ") + p.value(", ".join(now) or "(none)"))
+    return 0
+
+
+def cmd_pack_install(args: argparse.Namespace) -> int:
+    db = Database.load(args.db)
+    p = _make_painter(args, db)
+    try:
+        pack = packs_mod.install(args.path, db)
+    except (OSError, ValueError) as e:
+        print("error: %s" % e, file=sys.stderr)
+        return 2
+    print(p.good("Installed ") + p.value(pack["name"])
+          + p.muted(" [%s] -- %d drills, %d faces"
+                    % (pack["id"], len(pack["drills"]), len(pack["targets"]))))
+    print(p.muted("  Sensitivity: ") + _sens(p, pack["sensitivity"]))
+    cfg = packs_mod.settings(db)
+    if pack["sensitivity"] > cfg["max_sensitivity"]:
+        print(p.bad("  Not loading yet: above your ceiling of %d."
+                    % cfg["max_sensitivity"]))
+        print(p.muted("  Allow it with: ")
+              + p.value("marksman pack ceiling %d" % pack["sensitivity"]))
+    if pack.get("safety"):
+        print()
+        print(p.bad("  Safety (from the pack author)"))
+        print(_wrap(pack["safety"], indent="    "))
+    return 0
+
+
+# --------------------------------------------------------------------------- #
 # Logo / icon
 # --------------------------------------------------------------------------- #
 
@@ -1000,12 +1203,14 @@ def build_parser() -> argparse.ArgumentParser:
     wa.add_argument("--id", help="short id (auto if omitted)")
     wa.add_argument("--name", required=True)
     wa.add_argument("--category", default="Other",
-                    help="e.g. 'AEG', 'GBB Pistol', 'Bolt-Action'")
-    wa.add_argument("--bb", default="", help="free text, e.g. '6mm' or '0.25g'")
-    wa.add_argument("--bb-mm", type=float, dest="bb_mm",
-                    help="BB diameter in mm, default 6 (improves scoring)")
-    wa.add_argument("--gas", action="store_true",
-                    help="gas-powered (GBB / HPA)")
+                    help="grouping category; 'marksman pack show' lists the "
+                         "ones your packs offer")
+    wa.add_argument("--projectile", default="",
+                    help="free text, e.g. '6mm 0.25g' or 'Elite dart'")
+    wa.add_argument("--projectile-mm", type=float, dest="projectile_mm",
+                    help="projectile diameter in mm (improves scoring)")
+    wa.add_argument("--powered", action="store_true", dest="is_powered",
+                    help="gas / battery / air driven rather than manual")
     wa.add_argument("--notes", default="")
     wa.set_defaults(func=cmd_tool_add)
     wl = wsub.add_parser("list", help="list tools")
@@ -1024,7 +1229,8 @@ def build_parser() -> argparse.ArgumentParser:
                                     "distance and target face")
     ap.add_argument("--distance", type=float, help="distance in metres")
     ap.add_argument("--date", help="ISO date (default: today)")
-    ap.add_argument("--bbs", default="")
+    ap.add_argument("--projectiles", default="",
+                    help="what was loaded that day, free text")
     ap.add_argument("--notes", default="")
     ap.add_argument("--id", help="session id (auto if omitted)")
     ap.add_argument("--no-save", action="store_true", help="analyse without saving")
@@ -1122,6 +1328,30 @@ def build_parser() -> argparse.ArgumentParser:
     dpl.add_argument("--count", type=int, default=3, help="how many (default 3)")
     dpl.set_defaults(func=cmd_drill_plan)
 
+    # pack (equipment packs: the content layer)
+    kp = sub.add_parser("pack", help="equipment packs (drills, faces, categories)")
+    ksub = kp.add_subparsers(dest="pack_command")
+    kp.set_defaults(func=cmd_pack)
+    kl = ksub.add_parser("list", help="list installed packs")
+    kl.set_defaults(func=cmd_pack_list)
+    ks = ksub.add_parser("show", help="everything in one pack")
+    ks.add_argument("id")
+    ks.set_defaults(func=cmd_pack_show)
+    ke = ksub.add_parser("enable", help="switch a pack back on")
+    ke.add_argument("id")
+    ke.set_defaults(func=cmd_pack_enable)
+    kd = ksub.add_parser("disable", help="switch a pack off")
+    kd.add_argument("id")
+    kd.set_defaults(func=cmd_pack_disable)
+    kc = ksub.add_parser("ceiling",
+                         help="the sensitivity level you allow packs to reach")
+    kc.add_argument("level", nargs="?", type=int,
+                    help="1-5; omit to see the ladder")
+    kc.set_defaults(func=cmd_pack_ceiling)
+    ki = ksub.add_parser("install", help="install a pack JSON file")
+    ki.add_argument("path")
+    ki.set_defaults(func=cmd_pack_install)
+
     # gui (desktop window)
     up = sub.add_parser("gui", help="open the desktop app (tkinter)")
     up.set_defaults(func=cmd_gui)
@@ -1190,6 +1420,12 @@ def main(argv: Optional[List[str]] = None) -> int:
             pass
     parser = build_parser()
     args = parser.parse_args(argv)
+    # Content (drills, target faces, categories) comes from the equipment packs
+    # this database allows, so load them before any command runs.
+    try:
+        packs_mod.load(Database.load(args.db))
+    except (OSError, ValueError):
+        packs_mod.load(None)          # unreadable db: fall back to the defaults
     return args.func(args)
 
 

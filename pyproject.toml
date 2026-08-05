@@ -1,12 +1,12 @@
 [project]
 name = "marksman"
-version = "0.4.0"
-description = "Airsoft marksmanship drills and progress tracking: tiered practice drills, target-image analysis, charts, a desktop GUI and a phone web app -- all standard library."
+version = "0.5.0"
+description = "Marksmanship drills and progress tracking for any launcher -- airsoft, foam darts, or whatever you install a pack for: tiered drills, target-image analysis, charts, desktop GUI, phone web app and Google Drive sync. All standard library."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "Adam Erik Eryavec" }]
-keywords = ["airsoft", "marksmanship", "target", "grouping", "drills", "cli", "gui", "web", "mobile", "image-analysis", "coach"]
+keywords = ["marksmanship", "airsoft", "nerf", "target", "grouping", "drills", "cli", "gui", "web", "mobile", "google-drive", "image-analysis", "coach"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
@@ -56,3 +56,8 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["marksman"]
+
+# The bundled equipment packs are data files, so they need saying so or they
+# won't make it into the wheel and the app would install with no drills.
+[tool.setuptools.package-data]
+marksman = ["packs/*.json"]

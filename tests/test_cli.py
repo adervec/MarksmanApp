@@ -28,7 +28,7 @@ class TestCliFlow(unittest.TestCase):
     def test_full_flow(self):
         code, _ = self.run_cli("tool", "add", "--id", "ap1", "--name",
                                "Test AEG", "--category", "AEG",
-                               "--bb-mm", "6.0")
+                               "--projectile-mm", "6.0")
         self.assertEqual(code, 0)
 
         code, out = self.run_cli(

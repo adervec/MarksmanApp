@@ -8,7 +8,7 @@ from marksman import goals
 
 def _db(spread_mm):
     db = Database()
-    db.add_tool(Tool("aeg1", "Training AEG", category="AEG", bb_mm=6.0))
+    db.add_tool(Tool("aeg1", "Training AEG", category="AEG", projectile_mm=6.0))
     shots = [Shot(-spread_mm / 2, 0.0), Shot(spread_mm / 2, 0.0)]
     db.add_session(Session("s0", "aeg1", "2026-01-01", shots=shots,
                            stats=analyze_group(shots), distance_m=10.0))

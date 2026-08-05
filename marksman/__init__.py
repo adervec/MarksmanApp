@@ -1,4 +1,4 @@
-"""Marksman -- a progress tracker for airsoft marksmanship.
+"""Marksman -- a progress tracker for marksmanship with anything.
 
 The core of the package analyses marked-up images of targets (the groupings of
 shots on a paper target), turns them into precise marksmanship metrics, and
@@ -16,7 +16,8 @@ Layers (lowest to highest):
 * :mod:`marksman.tracker`   -- aggregate sessions into progress reports.
 * :mod:`marksman.render`    -- redraw a result diagram from stored shot data.
 * :mod:`marksman.theme`     -- visual "skins" for the terminal reports.
-* :mod:`marksman.drills`    -- named practice drills with tiered standards.
+* :mod:`marksman.packs`     -- equipment packs: the content layer (drills, faces).
+* :mod:`marksman.drills`    -- tiered standards, PRs and the adaptive plan.
 * :mod:`marksman.goals`     -- user-set targets for a single metric.
 * :mod:`marksman.coach`     -- the AI coach cowork folder (no network calls).
 * :mod:`marksman.cli`       -- command line entry point.
@@ -55,4 +56,4 @@ __all__ = [
     "list_themes",
 ]
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"

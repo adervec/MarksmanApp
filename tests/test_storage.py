@@ -16,7 +16,7 @@ class TestStorage(unittest.TestCase):
     def test_round_trip(self):
         db = Database(path=self.path)
         db.add_tool(Tool("w1", "Rental AEG", category="aeg",
-                             bb_mm=6.0, is_gas=False))
+                             projectile_mm=6.0, is_powered=False))
         tgt = uniform_target("T", ten_ring_diameter_mm=10.0, ring_step_mm=5.0)
         shots = [Shot(0, 0), Shot(3, 4)]
         st = analyze_group(shots, target=tgt)
@@ -32,7 +32,7 @@ class TestStorage(unittest.TestCase):
         w = db2.get_tool("w1")
         self.assertEqual(w.name, "Rental AEG")
         self.assertEqual(w.category, "AEG")   # normalised on load
-        self.assertEqual(w.bb_mm, 6.0)
+        self.assertEqual(w.projectile_mm, 6.0)
         s = db2.sessions["s1"]
         self.assertEqual(s.stats.shot_count, 2)
         self.assertAlmostEqual(s.stats.extreme_spread_mm, 5.0)

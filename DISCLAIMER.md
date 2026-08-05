@@ -22,23 +22,43 @@ for the controlling legal text.
 
 ## Not professional instruction or coaching
 
-The code, its reports, and the bundled guide reflect one player's personal
+The code, its reports, and any bundled content reflect one hobbyist's personal
 notes and opinions. They are **not** a substitute for hands‑on instruction or
-for the direction of the marshals/safety officers at your airsoft field. If
-anything here conflicts with their guidance or your field's rules, **follow
-them, not this.**
+for the direction of the marshals, range officers or safety officers wherever
+you are shooting. If anything here conflicts with their guidance or the site's
+rules, **follow them, not this.**
+
+## Equipment packs are third-party content
+
+Marksman is equipment‑agnostic: the drills, target faces, distances, standards
+and terminology come from **equipment packs**, which are data files. A pack you
+install may have been written by anyone. Its content is **not** authored,
+reviewed, endorsed, or checked for safety, accuracy or legality by this project,
+and a pack's "tiers" are its author's opinion — not a qualification, ranking, or
+official classification of any kind.
+
+Each pack declares a **sensitivity** level, and the app refuses to load packs
+above the ceiling you set. That is a convenience for organising your own
+content, **not** a safety control, an age gate, a legal control, or any kind of
+verification. You are responsible for what you install and for whether the
+activity it describes is lawful and safe where you are.
 
 ## Not medical advice
 
-Airsoft fires projectiles that can injure, especially the eyes. Nothing here is
-medical advice. Consult a qualified professional about eye and ear protection,
-any impact injury, or any health concern.
+Anything that launches a projectile can injure, especially the eyes. Nothing
+here is medical advice. Consult a qualified professional about eye and ear
+protection, any impact injury, or any health concern.
 
-## Airsoft safety is your responsibility
+## Safety is your responsibility
 
-Airsoft replicas are not toys — a BB can cause serious, permanent eye injury.
-You are solely responsible for safe handling and for following every rule of
-your field and jurisdiction, including at minimum:
+Whatever you shoot, you are solely responsible for safe handling and for
+following every rule of your site and jurisdiction. **Always wear appropriate,
+properly rated eye protection**, never point anything at a person or animal
+outside a consenting, controlled activity, and treat everything as capable of
+firing.
+
+For **airsoft** specifically — replicas are not toys, and a BB can cause
+serious, permanent eye injury:
 
 - **Always wear ANSI‑rated (or better), properly sealed eye protection** while
   any replica is in use, and keep it on in all live areas.
@@ -49,23 +69,23 @@ your field and jurisdiction, including at minimum:
 - Never brandish or carry a replica in public; transport it concealed and
   follow any required orange‑tip / marking rules.
 
-This project does not teach airsoft safety and is no substitute for proper,
-in‑person guidance.
+This project does not teach safety for airsoft or for anything else, and is no
+substitute for proper, in‑person guidance.
 
 ## Not legal advice; laws vary and change
 
 Any legal information here is a general, possibly outdated summary — **not legal
-advice.** Laws on buying, owning, transporting, and using airsoft replicas
-differ widely by country, state/province, and locality (age limits, markings,
-where use is permitted), and change over time. Verify the current rules with
-your local authorities before acting. If in doubt, consult a lawyer.
+advice.** Laws on buying, owning, transporting, and using airsoft replicas —
+and anything else a pack might cover — differ widely by country,
+state/province, and locality (age limits, markings, licensing, where use is
+permitted), and change over time. Verify the current rules with your local
+authorities before acting. If in doubt, consult a lawyer.
 
 ## Not official scoring
 
-The built‑in target faces are generic practice bullseyes with approximate ring
-sizes; image analysis and scoring are approximate. **Do not** rely on this
-software for official or competitive scoring — use that event's sanctioned
-target and rules.
+Target faces here are generic practice bullseyes with approximate ring sizes;
+image analysis and scoring are approximate. **Do not** rely on this software for
+official or competitive scoring — use that event's sanctioned target and rules.
 
 ## Accuracy of information & third‑party references
 

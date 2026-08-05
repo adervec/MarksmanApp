@@ -29,32 +29,44 @@ from typing import Any, List, Optional
 # Tool categories
 # --------------------------------------------------------------------------- #
 
-# A small, opinionated set of categories covering common airsoft setups.
-# Categories are stored as plain strings so users can add their own, but these
-# are offered for autocomplete / validation and grouping.
+# Neutral fallback categories. Real ones come from whatever equipment pack is
+# installed (see :mod:`marksman.packs`); these only exist so the app can group
+# tools sensibly with no pack at all. Categories are plain strings throughout,
+# so a user or a pack can add any of their own.
 STANDARD_CATEGORIES = (
-    "AEG",
-    "GBB Pistol",
-    "GBB Rifle",
-    "Spring",
-    "Bolt-Action",
-    "HPA",
-    "AEP",
+    "Manual",
+    "Powered",
     "Other",
 )
+
+
+# Categories the installed packs offer, filled in by :func:`packs.load`. They
+# join STANDARD_CATEGORIES as the names that get canonical capitalisation.
+_KNOWN_CATEGORIES = []  # type: List[str]
+
+
+def register_categories(names) -> None:
+    """Tell the normaliser about a pack's categories (called when packs load)."""
+    for n in names:
+        if n and n not in _KNOWN_CATEGORIES:
+            _KNOWN_CATEGORIES.append(n)
 
 
 def normalize_category(name: str) -> str:
     """Return a canonical category name (case/space tolerant).
 
-    Unknown categories are accepted verbatim (title-cased) so the app never
-    rejects a user's discipline -- it just keeps aggregation consistent.
+    A name a pack knows about gets that pack's capitalisation, so "aeg" and
+    "AEG" aggregate together.  Anything else is kept exactly as typed -- the
+    app never rejects a user's discipline, and never mangles an acronym by
+    title-casing it either.
     """
     cleaned = " ".join(name.strip().split())
-    for std in STANDARD_CATEGORIES:
-        if cleaned.lower() == std.lower():
-            return std
-    return cleaned.title() if cleaned else "Other"
+    if not cleaned:
+        return "Other"
+    for known in list(STANDARD_CATEGORIES) + _KNOWN_CATEGORIES:
+        if cleaned.lower() == known.lower():
+            return known
+    return cleaned
 
 
 # --------------------------------------------------------------------------- #
@@ -225,16 +237,21 @@ class GroupStats:
 
 @dataclass
 class Tool:
-    """An airsoft replica (gun) the user owns or rents."""
+    """Something that launches a projectile at a target.
+
+    Deliberately generic: a foam dart blaster, an airsoft replica, a bow --
+    the app only needs a name, a grouping category, and the projectile's size.
+    What any of it is *called* comes from the installed pack's terminology.
+    """
 
     id: str
     name: str
     category: str = "Other"
-    bb: str = ""               # free text, e.g. "6mm", "0.25g BBs"
-    is_gas: bool = False       # gas-powered (GBB / HPA) rather than AEG / spring
-    # BB diameter in mm (6 mm is typical); used to give shots their physical
-    # size when scoring "edge breaks the line" and when detecting impacts.
-    bb_mm: Optional[float] = None
+    projectile: str = ""       # free text, e.g. "6mm 0.25g", "Elite dart"
+    is_powered: bool = False   # gas / battery / air driven rather than manual
+    # Projectile diameter in mm; used to give shots their physical size when
+    # scoring "edge breaks the line" and when detecting impacts.
+    projectile_mm: Optional[float] = None
     notes: str = ""
 
     def __post_init__(self) -> None:
@@ -245,13 +262,15 @@ class Tool:
 
     @classmethod
     def from_dict(cls, d: dict) -> "Tool":
+        # The bb/bb_mm/is_gas names date from when this app was airsoft-only;
+        # databases written then still load.
         return cls(
             id=d["id"],
             name=d["name"],
             category=d.get("category", "Other"),
-            bb=d.get("bb", ""),
-            is_gas=d.get("is_gas", False),
-            bb_mm=d.get("bb_mm"),
+            projectile=d.get("projectile", d.get("bb", "")),
+            is_powered=d.get("is_powered", d.get("is_gas", False)),
+            projectile_mm=d.get("projectile_mm", d.get("bb_mm")),
             notes=d.get("notes", ""),
         )
 
@@ -276,8 +295,13 @@ class Session:
     stats: Optional[GroupStats] = None
     distance_m: Optional[float] = None
     target_name: str = ""
-    bbs: str = ""
+    projectiles: str = ""           # free text: what was loaded that day
     drill_id: str = ""              # the named drill this session was, if any
+    # Where this came from, when it wasn't typed in by hand -- currently
+    # "drive:<fileId>" for a photo pulled from Google Drive. Kept on the
+    # session (rather than in a side list) so it survives sync and export,
+    # and so "have I already logged this photo?" is answered by the data.
+    source_ref: str = ""
     image_path: str = ""            # source still image (may be bulky)
     video_path: str = ""            # source video (may be bulky)
     notes: str = ""
@@ -306,8 +330,9 @@ class Session:
             "stats": self.stats.to_dict() if self.stats else None,
             "distance_m": self.distance_m,
             "target_name": self.target_name,
-            "bbs": self.bbs,
+            "projectiles": self.projectiles,
             "drill_id": self.drill_id,
+            "source_ref": self.source_ref,
             "image_path": self.image_path,
             "video_path": self.video_path,
             "notes": self.notes,
@@ -325,8 +350,9 @@ class Session:
             stats=GroupStats.from_dict(d["stats"]) if d.get("stats") else None,
             distance_m=d.get("distance_m"),
             target_name=d.get("target_name", ""),
-            bbs=d.get("bbs", ""),
+            projectiles=d.get("projectiles", d.get("bbs", "")),
             drill_id=d.get("drill_id", ""),
+            source_ref=d.get("source_ref", ""),
             image_path=d.get("image_path", ""),
             video_path=d.get("video_path", ""),
             notes=d.get("notes", ""),

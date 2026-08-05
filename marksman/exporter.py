@@ -19,7 +19,7 @@ FIELDS = [
     "session_id", "date", "tool_id", "tool_name", "category", "target",
     "distance_m", "shots", "extreme_spread_mm", "mean_radius_mm",
     "group_mrad", "zero_error_mm", "total_score", "max_score", "score_pct",
-    "bbs", "notes",
+    "projectiles", "notes",
 ]
 
 
@@ -45,7 +45,7 @@ def session_rows(db: Database) -> List[Dict[str, object]]:
             "group_mrad": None if mrad is None else round(mrad, 3),
             "zero_error_mm": round(st.poa_offset_mm, 2),
             "total_score": st.total_score, "max_score": st.max_possible_score,
-            "score_pct": score_pct, "bbs": s.bbs, "notes": s.notes,
+            "score_pct": score_pct, "projectiles": s.projectiles, "notes": s.notes,
         })
     return rows
 

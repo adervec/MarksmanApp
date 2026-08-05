@@ -4,12 +4,17 @@
 
 [![CI](https://github.com/adervec/MarksmanApp/actions/workflows/ci.yml/badge.svg)](https://github.com/adervec/MarksmanApp/actions/workflows/ci.yml)
 
-A drills-and-progress tracker for **airsoft** — AEGs, gas blowback (GBB) pistols
-and rifles, spring, HPA, and bolt-action replicas. It gives you **12 named
-practice drills with four tiers each**, **analyses a marked-up image of a
-target** (the groupings of your hits) into precise marksmanship metrics, and
-**tracks your progress over time** — overall, by tool **category**, and by
-**specific tool**. Desktop app, **phone-friendly web app**, and full CLI.
+A drills-and-progress tracker for hitting what you aim at — with **whatever you
+shoot**. It **analyses a marked-up image of a target** (the groupings of your
+hits) into precise marksmanship metrics, judges them against **tiered practice
+standards**, and **tracks your progress over time** — overall, by tool
+**category**, and by **specific tool**. Desktop app, **phone-friendly web app**,
+**Google Drive sync**, and a full CLI.
+
+The app is deliberately **equipment-agnostic**: it knows about *tools* that
+launch *projectiles* at *target faces*, and nothing else. The drills, faces and
+vocabulary come from [**equipment packs**](#equipment-packs) — plain JSON files.
+Two are bundled (foam dart blasters and airsoft); write your own for anything.
 
 It is pure Python standard library: **no third-party packages required**
 (works on Python 3.9+). Image analysis reads PNG out of the box; if Pillow
@@ -21,9 +26,12 @@ happens to be installed, JPEG and other formats work too.
 > developer — **not** a coach, instructor, doctor, or lawyer. It computes
 > metrics for **personal progress tracking only**; it is **not** coaching,
 > safety, medical, or legal advice, and **not** an official scoring system.
-> Airsoft still fires projectiles: **always wear ANSI-rated eye protection,
-> follow your field's rules, and obey your local laws.** Provided "as is", with
-> no warranty. Full text: **[DISCLAIMER.md](DISCLAIMER.md)**.
+> **Anything that launches a projectile can injure someone: always wear eye
+> protection, follow the rules of wherever you are shooting, and obey your
+> local laws.** Equipment packs are content written by whoever wrote them —
+> their drills and standards are somebody's opinion, not this app's, and are
+> not checked by it. Provided "as is", with no warranty. Full text:
+> **[DISCLAIMER.md](DISCLAIMER.md)**.
 
 ## The desktop app
 
@@ -43,7 +51,7 @@ installed:
 | **Sessions** | Every session; render a diagram or delete one. |
 | **Goals** | Set, track and remove your own targets. |
 | **AI coach** | Write the cowork folder and pull the reply back in — one button each. |
-| **Tools** | Add and remove your replicas. |
+| **Tools** | Add and remove your tools. |
 
 Every terminal **skin** has a matching desktop palette (**Skin** menu).
 
@@ -58,15 +66,43 @@ marksman web          # then open the printed URL on your phone
 
 <img src="assets/screenshot_phone.png" alt="The Marksman web app on a phone: tier points, today's plan and recent sessions" width="320">
 
-Four tabs: **Home** (tier points, today's plan, recent sessions), **Drills**
-(the catalogue with your standings), **Log** (tap-to-place shots with live
-group stats, drill prefill, add-a-tool) and **Sessions**. Served by the
+Five tabs: **Home** (tier points, today's plan, recent sessions, installed
+packs and their safety notes), **Drills** (the catalogue with your standings),
+**Log** (tap-to-place shots with live group stats, drill prefill, add-a-tool),
+**Sessions** and **Drive**. Served by the
 standard library's `http.server` — still zero dependencies, and it works in a
 desktop browser too.
 
 The header's orientation toggle (**auto / portrait / landscape**) locks the
 layout by *setting*, not by how the phone happens to be tilted — handy when
 the phone is lying flat next to the target.
+
+## Google Drive
+
+The **Drive** tab does two separate things, sharing one sign-in:
+
+- **Sessions across devices** — your log syncs through Drive's private
+  app-data folder, which only this app can see. Nothing else in your Drive is
+  touched. Python owns the merge (union by id, local wins ties), so the phone
+  and the desktop converge.
+- **Target photos** — photograph your targets into a Drive folder, paste the
+  folder link, and tap a photo. Marksman downloads it, finds the hits, and drops
+  them onto the target face on the **Log** tab so you can correct them before
+  saving. The saved session remembers which photo it came from, so already-logged
+  photos are greyed out in the picker — and because that lives on the session,
+  it survives sync and export.
+
+Auth runs in the browser using Google Identity Services with the same public
+OAuth client as [Tachyread](https://github.com/adervec/Tachyread) and
+HandwritingHelper. It's an identifier, not a secret: it only works from the
+JavaScript origins registered with Google, and the app refuses it on any other
+origin. Access tokens live in memory and are never written to disk.
+
+> **You will probably need to register your address.** Google only allows
+> sign-in from origins registered against the client ID. Add
+> `http://localhost:8317` (and `http://127.0.0.1:8317`) under *Authorized
+> JavaScript origins* for that client, or paste your own client ID into the box
+> at the bottom of the Drive tab. The tab tells you what this page's origin is.
 
 The printed URL carries a one-run access code, so only someone with the full
 link can view or add sessions. It is meant for your home network — **don't
@@ -82,7 +118,7 @@ From a set of hits it computes the standard measures used to judge a group:
 | **Mean radius** | Average distance of hits from the group centre — a stable precision measure. |
 | **RMS radius / CEP / σx, σy** | Further precision descriptors. |
 | **Zero error (POA–POI)** | How far the group centre sits from your point of aim (sight/hop zero). |
-| **Score** | Points off the target's rings, with optional decimal (tenths) scoring and "edge breaks the line" BB-size handling. |
+| **Score** | Points off the target's rings, with optional decimal (tenths) scoring and "edge breaks the line" projectile-size handling. |
 
 Group size is also reported as an **angle** (mrad / MOA) using the distance, and
 score as a **percentage of maximum**, so sessions at different distances and on
@@ -120,29 +156,29 @@ Your data lives in a single `marksman_data.json` (the shortcut opens in
 # 0) Prefer clicking to typing? Everything below is in the desktop app too.
 python -m marksman gui
 
-# 1) Register a tool (your airsoft replica)
-python -m marksman.cli tool add --id aeg1 --name "Training AEG" \
-    --category "AEG" --bb 6mm --bb-mm 6.0
+# 1) Register a tool -- whatever launches the projectile
+python -m marksman.cli tool add --id b1 --name "Training AEG" \
+    --category "AEG" --projectile 6mm --projectile-mm 6.0
 
 # 2a) Analyse a photo/scan where each hit is marked with a red dot/circle.
 #     The image spans a 400 mm target face; find the bull automatically.
-python -m marksman.cli analyze --tool aeg1 --target "Airsoft Practice 10m" \
+python -m marksman.cli analyze --tool b1 --target "Airsoft Practice 10m" \
     --distance 10 --image my_target.png --color red --auto-center
 
 # 2b) ...or just type the shot coordinates (mm from point of aim):
-python -m marksman.cli analyze --tool aeg1 --target "Airsoft Practice 10m" \
+python -m marksman.cli analyze --tool b1 --target "Airsoft Practice 10m" \
     --distance 10 --shots "1.2,3.4  -2.0,5.1  0.5,-1.0"
 
 # 2c) ...or shoot a named drill, which brings its own distance and target face
 python -m marksman.cli drill plan               # what to practise today
-python -m marksman.cli analyze --tool aeg1 --drill group-10 \
+python -m marksman.cli analyze --tool b1 --drill group-10 \
     --shots "8,2  -6,4  1,-7  -3,5  4,1"        # prints the tier you earned
 
 # 3) Track progress
 python -m marksman.cli progress                 # overall
 python -m marksman.cli progress --by-category
 python -m marksman.cli progress --by-tool
-python -m marksman.cli progress --tool aeg1 --sessions
+python -m marksman.cli progress --tool b1 --sessions
 python -m marksman.cli sessions                 # list every saved target
 python -m marksman.cli targets                  # built-in target faces
 
@@ -152,8 +188,8 @@ python -m marksman.cli theme preview inferno    # try one on
 python -m marksman.cli theme set recon          # make it the default
 
 # 5) Save space: recreate results as diagrams, then delete bulky source media
-python -m marksman.cli render --tool aeg1       # redraw from stored shots
-python -m marksman.cli cleanup --tool aeg1      # dry run (add --apply to delete)
+python -m marksman.cli render --tool b1       # redraw from stored shots
+python -m marksman.cli cleanup --tool b1      # dry run (add --apply to delete)
 ```
 
 ## Analysing an image
@@ -194,9 +230,9 @@ practice feedback only, never coaching-certification, medical, or safety advice.
 
 ## Drills
 
-Twelve named drills, each with a distance, a shot count, a target face, and one
-metric it is judged on — plus **four tiers**: `Rookie → Steady → Sharp →
-Marksman`. Your **best** attempt sets the tier, so a bad day never demotes you.
+A drill has a distance, a shot count, a target face, and one metric it is judged
+on — plus **four tiers**: `Rookie → Steady → Sharp → Marksman`. Your **best**
+attempt sets the tier, so a bad day never demotes you.
 
 ```bash
 marksman drill                       # the catalogue + your tier on each
@@ -205,26 +241,98 @@ marksman drill show hopup-ladder     # why, how to run it, cues, standards
 marksman drill plan                  # what to practise today, and why
 
 # Log an attempt -- the drill supplies the distance and target face
-marksman analyze --tool aeg1 --drill group-10 --shots "8,2 -6,4 1,-7 -3,5 4,1"
+marksman analyze --tool b1 --drill group-10 --shots "8,2 -6,4 1,-7 -3,5 4,1"
 ```
 
-| Family | Drills |
-|---|---|
-| **Zeroing** | Zero Check |
-| **Precision** | Five-Shot Group, Mean Radius Grind, Long Precision, Distance Ladder |
-| **Tuning** | Hop-Up Ladder |
-| **Speed** | Close Face Score |
-| **Fundamentals** | Slow Fire Singles |
-| **Positional** | Support-Side Group, Kneeling Group, Supported Long Group |
-| **Consistency** | Cold Start |
+The drills themselves come from whichever **equipment packs** you have installed
+(see below) — the app supplies the tiering, the personal records and the plan,
+not the content. The two bundled packs give you 18 drills across families like
+Zeroing, Precision, Tuning, Speed, Fundamentals, Positional and Consistency.
 
 `drill plan` is **adaptive**: it surfaces drills you've never tried, ones you're
 within reach of the next tier on, ones going stale, and ones trending the wrong
 way — and tells you which reason applied. The standings and the plan ride along
 in the coach export too.
 
-> The tiers are practice standards **for this app only** — a visible next rung,
-> not an official classification of any kind.
+> Tiers are practice standards set by **whoever wrote the pack** — a visible
+> next rung, not an official classification of any kind.
+
+## Equipment packs
+
+Marksman itself knows nothing about any particular kind of shooting. It knows
+about **tools** that launch **projectiles** at **target faces**. Everything with
+a subject matter — what the tool is called, which faces exist, what the drills
+are — lives in a **pack**: a plain JSON file the app reads at startup.
+
+```bash
+marksman pack list             # what's installed, and what's loading
+marksman pack show airsoft     # drills, faces, categories, safety notes
+marksman pack install ./my-pack.json
+marksman pack disable foam
+```
+
+Two ship with the app, and they are ordinary packs with no special privileges:
+
+| Pack | Sensitivity | What's in it |
+|---|---|---|
+| **Foam Dart Blasters** | 1 · Toy | 6 drills, 2 faces, sized for how wide a foam dart actually spreads |
+| **Airsoft** | 2 · Sport | 12 drills, 3 faces, for AEGs, GBBs, spring, HPA and bolt-action |
+
+### Writing your own
+
+A pack is data, never code — it is read with `json.load` and nothing else, so an
+installed pack can't execute anything. Drop it in `~/.marksman/packs/` (or set
+`MARKSMAN_PACKS`), or run `marksman pack install`. A pack with the same `id` as
+a bundled one replaces it, and a malformed one is reported by name rather than
+breaking the others.
+
+```json
+{
+  "schema_version": 1,
+  "id": "slingshot",
+  "name": "Slingshots",
+  "sensitivity": 2,
+  "safety": "Eye protection. Never at people or animals.",
+  "terms": {"tool": "slingshot", "projectile": "ammo"},
+  "categories": ["Flatband", "Tubular"],
+  "targets": [{"name": "Can Line 8m", "ten_ring_mm": 60,
+               "ring_step_mm": 30, "face_mm": 600}],
+  "drills": [{
+    "id": "sling-8", "name": "Eight-Metre Group", "family": "Precision",
+    "distance_m": 8, "shots": 10, "target": "Can Line 8m",
+    "metric": "group_size", "cutoffs": [300, 220, 150, 90],
+    "why": "The headline number.",
+    "how": ["Braced stance, ten shots, one aiming point."],
+    "cues": ["Same anchor point every draw."]
+  }]
+}
+```
+
+`metric` is one of `group_size`, `group_mrad`, `mean_radius`, `zero_error` or
+`score`; the four `cutoffs` must get harder in the right direction for it, and
+that's checked on load. If exactly one pack is active, its `terms` rename things
+throughout the app; with several installed the neutral words are used, because
+calling a dart a BB would be worse than saying "projectile".
+
+### Sensitivity
+
+Every pack declares how regulated or contentious its subject is, 1–5. A pack
+above your **ceiling** is found and listed but **not loaded** until you raise it
+on purpose:
+
+```bash
+marksman pack ceiling          # the ladder, and where you sit
+marksman pack ceiling 3        # raise it deliberately
+```
+
+The ceiling starts at **2**, so a fresh install only ever loads recreational
+content. Both bundled packs sit at or below it. Raising it prints what you're
+taking on, and each active pack's own safety text is shown in the app.
+
+> Packs are content written by whoever wrote them — **not** by this app, and not
+> checked by it. Their drills, distances and standards are somebody's opinion.
+> You are responsible for obeying the law where you live and for handling
+> whatever you own safely.
 
 ## Goals
 
@@ -232,7 +340,7 @@ Set a target for one metric — overall or for a specific tool — and track it.
 goal is "met" once your **best** session for that scope crosses the target.
 
 ```bash
-marksman goal set --metric group_size --target 30 --tool aeg1   # <= 30 mm group
+marksman goal set --metric group_size --target 30 --tool b1   # <= 30 mm group
 marksman goal set --metric score --target 80                    # >= 80% overall
 marksman goal list                                              # progress + status
 marksman goal rm <id>
@@ -303,11 +411,11 @@ result is preserved.
 ```bash
 # Redraw a result from stored data (no source media needed)
 marksman render --session 2026-04-15        # -> recreations/2026-04-15.png
-marksman render --tool aeg1                 # one PNG per session
+marksman render --tool b1                 # one PNG per session
 marksman render --session 2026-04-15 --out group.png
 
 # Reclaim space. Dry run first (shows what would be freed, deletes nothing):
-marksman cleanup --tool aeg1
+marksman cleanup --tool b1
 marksman cleanup --before 2026-01-01
 marksman cleanup --apply                    # saves a recreation, then deletes
 ```
@@ -356,10 +464,11 @@ print(stats.extreme_spread_mm, stats.total_score)
 
 ## Scope & accuracy
 
-The built-in faces are **generic practice bullseyes** with reasonable ring
-sizes for 6 mm BBs at common distances — they are for personal progress
-tracking, not an official standard. Print whatever face you like and register a
-custom one with `targets.uniform_target` + `targets.register`.
+The app ships **one** neutral practice face; every other face comes from an
+equipment pack. They are generic concentric bullseyes with reasonable ring sizes
+for their discipline — for personal progress tracking, not an official standard.
+Print whatever face you like and register a custom one with
+`targets.uniform_target` + `targets.register`, or put it in a pack.
 
 ## License
 

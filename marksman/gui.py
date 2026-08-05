@@ -28,11 +28,17 @@ from tkinter import filedialog, messagebox, ttk
 from . import coach as coach_mod
 from . import drills as drills_mod
 from . import exporter, goals as goals_mod, render, targets as targets_mod
+from . import packs as packs_mod
 from . import theme as theme_mod
 from . import tracker
 from .grouping import analyze_group
-from .models import Session, Shot, TargetSpec, Tool, STANDARD_CATEGORIES
+from .models import Session, Shot, TargetSpec, Tool
 from .storage import DEFAULT_DB_PATH, Database
+
+
+def _term(word: str) -> str:
+    """The active pack's word for a core concept, else the neutral one."""
+    return packs_mod.term(word)
 
 # --------------------------------------------------------------------------- #
 # Palette -- the terminal skins, translated to a dark desktop theme
@@ -67,7 +73,7 @@ DISCLAIMER = (
     "instructor, doctor or lawyer. It computes metrics for personal progress "
     "tracking only; it is not coaching, safety, medical or legal advice, and "
     "not an official scoring system.\n\n"
-    "Airsoft still fires projectiles: always wear ANSI-rated eye protection, "
+    "Anything that launches a projectile can injure: always wear eye protection, "
     "follow your field's rules, and obey your local laws.\n\n"
     "Provided \"as is\", with no warranty. See DISCLAIMER.md."
 )
@@ -106,7 +112,7 @@ class TargetCanvas(tk.Canvas):
         self.on_change = on_change
         self.shots = []            # type: List[Shot]
         self.target = None         # type: Optional[TargetSpec]
-        self.bb_mm = 6.0
+        self.projectile_mm = 6.0
         self._scale = 1.0          # px per mm
         self.bind("<Button-1>", self._add)
         self.bind("<Button-3>", self._remove)
@@ -228,7 +234,7 @@ class TargetCanvas(tk.Canvas):
         pal = self.pal
         if not self.shots:
             return
-        r = max(self.bb_mm * self._scale / 2.0, 3.0)
+        r = max(self.projectile_mm * self._scale / 2.0, 3.0)
         if len(self.shots) >= 2:
             gx = sum(s.x_mm for s in self.shots) / len(self.shots)
             gy = sum(s.y_mm for s in self.shots) / len(self.shots)
@@ -463,7 +469,7 @@ class App(tk.Tk):
         bar = ttk.Frame(self)
         bar.pack(fill="x", padx=14, pady=(12, 4))
         ttk.Label(bar, text="Marksman", style="H1.TLabel").pack(side="left")
-        ttk.Label(bar, text="  airsoft marksmanship drills & progress",
+        ttk.Label(bar, text="  marksmanship drills & progress",
                   style="Muted.TLabel").pack(side="left", pady=(6, 0))
         self._streak_lbl = ttk.Label(bar, text="", style="H2.TLabel")
         self._streak_lbl.pack(side="right")
@@ -567,7 +573,7 @@ class App(tk.Tk):
     def show_about(self) -> None:
         messagebox.showinfo(
             "About Marksman",
-            "Marksman -- airsoft marksmanship drills and progress tracking.\n"
+            "Marksman -- marksmanship drills and progress tracking.\n"
             "Pure Python standard library, no third-party packages.\n"
             "MIT licensed. © 2026 Adam Erik Eryavec.\n\n" + DISCLAIMER)
 
@@ -770,7 +776,7 @@ class App(tk.Tk):
 
         self._log_tool = tk.StringVar()
         self._log_drill = tk.StringVar(value="(free practice)")
-        self._log_target = tk.StringVar(value="Airsoft Practice 10m")
+        self._log_target = tk.StringVar(value="")
         self._log_dist = tk.StringVar(value="10")
         self._log_date = tk.StringVar(value=date.today().isoformat())
         self._log_bbs = tk.StringVar()
@@ -795,11 +801,14 @@ class App(tk.Tk):
         self._w_drill = field("Drill", self._log_drill,
                               ["(free practice)"] + [d["name"] for d in drills_mod.all_drills()],
                               cb=lambda: self._on_drill_pick())
+        faces = targets_mod.list_targets()
+        if faces and not self._log_target.get():
+            self._log_target.set(faces[0])
         self._w_target = field("Target face", self._log_target,
-                               targets_mod.list_targets(), cb=lambda: self._sync_canvas())
+                               faces, cb=lambda: self._sync_canvas())
         field("Distance (m)", self._log_dist)
         field("Date", self._log_date)
-        field("BBs", self._log_bbs)
+        field(_term("projectiles").title(), self._log_bbs)
         field("Notes", self._log_notes)
 
         row = ttk.Frame(form, style="Panel.TFrame")
@@ -842,7 +851,7 @@ class App(tk.Tk):
         except KeyError:
             spec = None
         tool = self.db.find_tool(self._log_tool.get() or "")
-        self.canvas.bb_mm = (tool.bb_mm if tool and tool.bb_mm else 6.0)
+        self.canvas.projectile_mm = (tool.projectile_mm if tool and tool.projectile_mm else 6.0)
         self.canvas.set_target(spec)
         self._on_shots(self.canvas.shots)
 
@@ -857,7 +866,7 @@ class App(tk.Tk):
             spec = None
         tool = self.db.find_tool(self._log_tool.get() or "")
         stats = analyze_group(shots, target=spec,
-                              bb_mm=(tool.bb_mm if tool and tool.bb_mm else 0.0))
+                              projectile_mm=(tool.projectile_mm if tool and tool.projectile_mm else 0.0))
         try:
             dist = float(self._log_dist.get())
         except ValueError:
@@ -934,12 +943,12 @@ class App(tk.Tk):
         for d in drills_mod.all_drills():
             if d["name"] == self._log_drill.get():
                 drill_id = d["id"]
-        stats = analyze_group(shots, target=spec, bb_mm=tool.bb_mm or 0.0)
+        stats = analyze_group(shots, target=spec, projectile_mm=tool.projectile_mm or 0.0)
         sid = "%s-%s" % (when, os.urandom(3).hex())
         session = Session(
             id=sid, tool_id=tool.id, date=when, shots=shots, stats=stats,
             distance_m=dist, target_name=spec.name if spec else "",
-            bbs=self._log_bbs.get(), drill_id=drill_id,
+            projectiles=self._log_bbs.get(), drill_id=drill_id,
             image_path=getattr(self, "_pending_image", ""),
             notes=self._log_notes.get())
         self.db.add_session(session)
@@ -1243,7 +1252,7 @@ class App(tk.Tk):
         form = ttk.Frame(root, style="Panel.TFrame", padding=10)
         form.pack(fill="x")
         tid, name = tk.StringVar(), tk.StringVar()
-        cat = tk.StringVar(value="AEG")
+        cat = tk.StringVar(value="Other")
         bb = tk.StringVar(value="6.0")
 
         for label, var, width in (("Id", tid, 12), ("Name", name, 22)):
@@ -1251,8 +1260,9 @@ class App(tk.Tk):
             ttk.Entry(form, textvariable=var, width=width).pack(side="left", padx=(6, 12))
         ttk.Label(form, text="Category", style="Panel.TLabel").pack(side="left")
         ttk.Combobox(form, textvariable=cat, state="readonly", width=14,
-                     values=list(STANDARD_CATEGORIES)).pack(side="left", padx=(6, 12))
-        ttk.Label(form, text="BB mm", style="Panel.TLabel").pack(side="left")
+                     values=packs_mod.categories()).pack(side="left", padx=(6, 12))
+        ttk.Label(form, text=_term("projectile").title() + " mm",
+                  style="Panel.TLabel").pack(side="left")
         ttk.Entry(form, textvariable=bb, width=6).pack(side="left", padx=6)
 
         tv = self._tree(root, ("id", "name", "category", "bb mm", "sessions"),
@@ -1265,7 +1275,7 @@ class App(tk.Tk):
             try:
                 self.db.add_tool(Tool(tid.get().strip(), name.get().strip(),
                                       category=cat.get(),
-                                      bb_mm=float(bb.get()) if bb.get() else None))
+                                      projectile_mm=float(bb.get()) if bb.get() else None))
             except ValueError as e:
                 messagebox.showwarning("Tool", str(e))
                 return
@@ -1298,7 +1308,7 @@ class App(tk.Tk):
             tv.delete(*tv.get_children())
             for t in self.db.tools.values():
                 tv.insert("", "end", values=(
-                    t.id, t.name, t.category, _fmt(t.bb_mm, 1),
+                    t.id, t.name, t.category, _fmt(t.projectile_mm, 1),
                     len(self.db.sessions_for_tool(t.id))))
 
         self._refreshers.append(refresh)

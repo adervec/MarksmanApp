@@ -1,10 +1,13 @@
-"""Built-in target face specifications for airsoft practice.
+"""Target face specifications: concentric scoring rings.
 
-Airsoft has no single universal scoring face, so these are generic concentric
-ring targets sized for common practice distances with 6 mm BBs.  Ring sizes are
-reasonable defaults for personal progress tracking, not an official standard --
-print whatever face you like and register a custom one with
-:func:`uniform_target` + :func:`register`.
+The app itself ships **one** neutral practice face so it is usable with no
+content installed.  Every other face -- sized for a particular discipline and
+distance -- comes from an equipment pack (:mod:`marksman.packs`), which
+registers it here at startup.
+
+Ring sizes are reasonable defaults for personal progress tracking, not an
+official standard.  Print whatever face you like and register a custom one
+with :func:`uniform_target` + :func:`register`.
 """
 
 from __future__ import annotations
@@ -43,46 +46,22 @@ def uniform_target(
 
 
 # --------------------------------------------------------------------------- #
-# Standard airsoft practice faces (generic concentric bullseyes)
+# The one built-in face
 # --------------------------------------------------------------------------- #
 
-def _airsoft_practice_10m() -> TargetSpec:
-    # General-purpose 10 m bullseye: 40 mm ten-ring, 20 mm radial step.
-    t = uniform_target("Airsoft Practice 10m", ten_ring_diameter_mm=40.0,
-                       ring_step_mm=20.0, face_size_mm=400.0)
-    t.notes = "Generic 10 m practice bullseye for 6 mm BBs."
-    return t
-
-
-def _airsoft_cqb_7m() -> TargetSpec:
-    # Larger rings for close, fast shooting.
-    t = uniform_target("Airsoft CQB 7m", ten_ring_diameter_mm=70.0,
-                       ring_step_mm=30.0, face_size_mm=600.0)
-    t.notes = "Close-range practice face (CQB distances)."
-    return t
-
-
-def _airsoft_precision_20m() -> TargetSpec:
-    # Tighter rings for longer-range DMR / sniper practice.
-    t = uniform_target("Airsoft Precision 20m", ten_ring_diameter_mm=25.0,
-                       ring_step_mm=15.0, face_size_mm=350.0)
-    t.notes = "Tighter face for longer-range (DMR / sniper) practice."
+def _practice_face() -> TargetSpec:
+    # Mid-sized concentric bullseye that suits most things at a few metres.
+    # Anything discipline-specific belongs in a pack, not here.
+    t = uniform_target("Practice Face", ten_ring_diameter_mm=50.0,
+                       ring_step_mm=25.0, face_size_mm=500.0)
+    t.notes = ("Neutral 10-ring practice face. Install an equipment pack for "
+               "faces sized to your discipline.")
     return t
 
 
 _BUILTINS = {}  # type: dict
 
-
-def _register_builtin(spec: TargetSpec) -> None:
-    _BUILTINS[spec.name.lower()] = spec
-
-
-for _factory in (
-    _airsoft_practice_10m,
-    _airsoft_cqb_7m,
-    _airsoft_precision_20m,
-):
-    _register_builtin(_factory())
+_BUILTINS[_practice_face().name.lower()] = _practice_face()
 
 
 def register(spec: TargetSpec) -> None:
@@ -90,8 +69,33 @@ def register(spec: TargetSpec) -> None:
     _BUILTINS[spec.name.lower()] = spec
 
 
+_packs_tried = False
+
+
+def _ensure_packs() -> None:
+    """Load the installed packs' faces on first lookup.
+
+    The app's entry points load packs explicitly (they know which database's
+    settings apply), but importing :mod:`marksman.targets` on its own should
+    still see the faces a pack provides -- otherwise using this as a library
+    means knowing to call :func:`marksman.packs.load` first.
+
+    Imported here rather than at module scope because packs imports us.
+    """
+    global _packs_tried
+    if _packs_tried:
+        return
+    _packs_tried = True
+    try:
+        from . import packs
+        packs.active()
+    except Exception:            # a broken pack must not break target lookup
+        pass
+
+
 def get_target(name: str) -> TargetSpec:
     """Look up a target by name (case-insensitive). Raises KeyError if absent."""
+    _ensure_packs()
     key = name.strip().lower()
     if key not in _BUILTINS:
         raise KeyError(
@@ -102,4 +106,5 @@ def get_target(name: str) -> TargetSpec:
 
 def list_targets() -> List[str]:
     """Names of all registered targets, sorted."""
+    _ensure_packs()
     return sorted(spec.name for spec in _BUILTINS.values())

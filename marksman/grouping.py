@@ -31,20 +31,20 @@ from .models import Shot, TargetSpec, GroupStats
 def score_shot(
     shot: Shot,
     target: TargetSpec,
-    bb_mm: float = 0.0,
+    projectile_mm: float = 0.0,
 ) -> float:
     """Score a single shot against a target face.
 
     A shot scores the value of the smallest ring whose zone it touches.  When
-    ``bb_mm`` is given, the shot's *edge* is used (the classic "breaks the
-    line scores the higher value" rule): a shot counts for a ring if the BB's
+    ``projectile_mm`` is given, the shot's *edge* is used (the classic "breaks
+    the line scores the higher value" rule): a shot counts for a ring if its
     inner edge reaches into it.
 
     With ``decimal_scoring`` the score is interpolated to tenths the way
     precision targets are scored (e.g. 10.9 dead centre).
     """
     r = shot.radius_mm
-    edge = max(0.0, r - bb_mm / 2.0)  # closest approach of the BB to centre
+    edge = max(0.0, r - projectile_mm / 2.0)   # closest approach to centre
 
     if target.decimal_scoring:
         return _decimal_score(edge, target)
@@ -82,13 +82,13 @@ def _decimal_score(edge_mm: float, target: TargetSpec) -> float:
 def score_shots(
     shots: Sequence[Shot],
     target: TargetSpec,
-    bb_mm: float = 0.0,
+    projectile_mm: float = 0.0,
     annotate: bool = True,
 ) -> float:
     """Score every shot, optionally writing each ``shot.score``; return total."""
     total = 0.0
     for s in shots:
-        v = score_shot(s, target, bb_mm)
+        v = score_shot(s, target, projectile_mm)
         if annotate:
             s.score = v
         total += v
@@ -128,7 +128,7 @@ def extreme_spread(shots: Sequence[Shot]) -> float:
 def analyze_group(
     shots: Sequence[Shot],
     target: Optional[TargetSpec] = None,
-    bb_mm: float = 0.0,
+    projectile_mm: float = 0.0,
 ) -> GroupStats:
     """Compute the full :class:`GroupStats` for a set of shots.
 
@@ -169,7 +169,7 @@ def analyze_group(
     max_possible = None
     avg_score = None
     if target is not None:
-        total_score = score_shots(shots, target, bb_mm, annotate=True)
+        total_score = score_shots(shots, target, projectile_mm, annotate=True)
         max_possible = float(target.max_value) * n
         if target.decimal_scoring:
             max_possible = (target.max_value + 0.9) * n

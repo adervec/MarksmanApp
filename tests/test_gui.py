@@ -41,7 +41,7 @@ class TestApp(unittest.TestCase):
         os.close(fd)
         os.remove(self.path)
         db = Database(path=self.path)
-        db.add_tool(Tool("aeg1", "Training AEG", category="AEG", bb_mm=6.0))
+        db.add_tool(Tool("aeg1", "Training AEG", category="AEG", projectile_mm=6.0))
         shots = [Shot(-15.0, 0.0), Shot(15.0, 0.0)]
         db.add_session(Session("s1", "aeg1", "2026-01-01", shots=shots,
                                stats=analyze_group(shots), distance_m=10.0,

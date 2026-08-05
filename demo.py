@@ -60,7 +60,7 @@ def analyse_and_store(db, tool, date, shots_mm, target, path):
         center_px=CENTER, mm_per_px=MM_PER_PX,
     )
     stats = analyze_group(result.shots, target=target,
-                          bb_mm=tool.bb_mm or 0.0)
+                          projectile_mm=tool.projectile_mm or 0.0)
     session = Session(
         id=date, tool_id=tool.id, date=date, shots=result.shots,
         stats=stats, distance_m=10.0, target_name=target.name, image_path=path,
@@ -77,7 +77,7 @@ def main():
     workdir = tempfile.mkdtemp(prefix="marksman_demo_")
     db = Database(path=os.path.join(workdir, "demo_data.json"))
     tool = Tool(id="aeg1", name="Training AEG", category="AEG",
-                    bb="6mm", is_gas=False, bb_mm=6.0)
+                    projectile="6mm", is_powered=False, projectile_mm=6.0)
     db.add_tool(tool)
     target = get_target("Airsoft Practice 10m")
 

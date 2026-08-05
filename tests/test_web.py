@@ -1,5 +1,6 @@
 """Web app tests: a real server on an ephemeral port, driven with urllib."""
 
+import base64
 import json
 import os
 import tempfile
@@ -8,12 +9,37 @@ import unittest
 import urllib.error
 import urllib.request
 
-from marksman import web
+from marksman import imageio, web
 from marksman.grouping import analyze_group
 from marksman.models import Session, Shot, Tool
 from marksman.storage import Database
 
 TOKEN = "testtok"
+
+#: Where the marker dots sit, in mm from the point of aim.
+MARKS = [(-40.0, 20.0), (30.0, -10.0), (5.0, 45.0)]
+
+
+def _target_png(size=600, face_mm=400.0):
+    """A photo-like target: pale paper, dark bull, red marker dots on the hits.
+
+    This is what a phone photo pulled from Drive looks like to the vision
+    layer, so the test covers the whole Drive-import path bar the OAuth.
+    """
+    img = imageio.Image(size, size, bytearray([240]) * (size * size * 3))
+    mid = size / 2.0
+    for y in range(size):                       # dark bull, for auto-centring
+        for x in range(size):
+            if (x - mid) ** 2 + (y - mid) ** 2 < 3600:
+                img.set(x, y, 25, 25, 25)
+    per_mm = size / face_mm
+    for mx, my in MARKS:
+        cx, cy = mid + mx * per_mm, mid - my * per_mm
+        for y in range(int(cy) - 7, int(cy) + 8):
+            for x in range(int(cx) - 7, int(cx) + 8):
+                if 0 <= x < size and 0 <= y < size and (x - cx) ** 2 + (y - cy) ** 2 <= 49:
+                    img.set(x, y, 220, 30, 30)
+    return imageio.encode_png(img)
 
 
 class TestWeb(unittest.TestCase):
@@ -23,7 +49,7 @@ class TestWeb(unittest.TestCase):
         os.close(fd)
         os.remove(self.path)
         db = Database(path=self.path)
-        db.add_tool(Tool("aeg1", "Training AEG", category="AEG", bb_mm=6.0))
+        db.add_tool(Tool("aeg1", "Training AEG", category="AEG", projectile_mm=6.0))
         shots = [Shot(-15.0, 0.0), Shot(15.0, 0.0)]
         db.add_session(Session("s1", "aeg1", "2026-01-01", shots=shots,
                                stats=analyze_group(shots), distance_m=10.0,
@@ -82,12 +108,25 @@ class TestWeb(unittest.TestCase):
     def test_state(self):
         status, s = self._json("/api/state")
         self.assertEqual(status, 200)
-        self.assertEqual(len(s["drills"]), 12)
         self.assertEqual(s["tools"][0]["id"], "aeg1")
         self.assertGreaterEqual(len(s["targets"]), 3)
         self.assertEqual(len(s["plan"]), 3)
         group10 = next(d for d in s["drills"] if d["id"] == "group-10")
         self.assertEqual(group10["tier"], "Sharp")        # 30 mm PR from setUp
+        # Content comes from packs, and the page is told about them.
+        self.assertTrue(s["packs"])
+        self.assertIn("airsoft", [p["id"] for p in s["packs"]])
+        self.assertEqual(len(s["drills"]),
+                         sum(p["drills"] for p in s["packs"] if p["active"]))
+        # Two packs are active, so the UI keeps the app's neutral vocabulary.
+        self.assertEqual(s["terms"]["projectile"], "projectile")
+
+    def test_page_offers_drive_with_the_shared_oauth_client(self):
+        _, raw = self._call("/")
+        self.assertIn(b"547617739897-br6dj2facmsc34qnkjb5u4dbfhju39pu", raw)
+        # Its own sync file: the app-data folder is shared per OAuth client.
+        self.assertIn(b"marksman-sessions.json", raw)
+        self.assertIn(b"drive.appdata", raw)
 
     # -- live stats --------------------------------------------------------- #
     def test_stats(self):
@@ -131,6 +170,66 @@ class TestWeb(unittest.TestCase):
             self.assertEqual(status, 400, body)
             self.assertIn("error", r)
         self.assertEqual(len(Database.load(self.path).sessions), 1)
+
+    def test_drive_photo_is_remembered_on_the_session(self):
+        status, _ = self._json("/api/session", body={
+            "tool_id": "aeg1", "target": "Airsoft Practice 10m", "distance_m": 10,
+            "shots": [{"x_mm": -10, "y_mm": 0}, {"x_mm": 10, "y_mm": 0}],
+            "source_ref": "drive:FILEID123",
+        })
+        self.assertEqual(status, 200)
+        # The picker greys out photos already logged, from the sessions
+        # themselves -- so it survives sync rather than living in a side list.
+        _, s = self._json("/api/state")
+        self.assertIn("FILEID123", s["imported"])
+        status, _ = self._json("/api/session", body={
+            "tool_id": "aeg1", "shots": [{"x_mm": 0, "y_mm": 0}],
+            "source_ref": "ftp://elsewhere",
+        })
+        self.assertEqual(status, 400)
+
+    def test_sync_merges_a_remote_bundle(self):
+        remote = {
+            "app": "marksman", "version": 1,
+            "tools": [{"id": "other", "name": "Phone-logged", "category": "AEG"}],
+            "sessions": [{"id": "remote1", "tool_id": "other", "date": "2026-02-02",
+                          "shots": [{"x_mm": 0.0, "y_mm": 0.0}], "stats": None}],
+            "settings": {},
+        }
+        status, r = self._json("/api/sync", body={"remote": remote})
+        self.assertEqual(status, 200)
+        self.assertEqual(r["addedSessions"], 1)
+        self.assertEqual(r["addedTools"], 1)
+        db = Database.load(self.path)
+        self.assertIn("remote1", db.sessions)
+        # Merging is a union by id, so replaying the same bundle changes nothing.
+        _, again = self._json("/api/sync", body={"remote": remote})
+        self.assertEqual(again["addedSessions"], 0)
+        status, _ = self._json("/api/sync", body={"remote": {"app": "tachyread"}})
+        self.assertEqual(status, 400)
+
+    def test_analyze_image_rejects_junk(self):
+        status, _ = self._json("/api/analyze-image",
+                               body={"image_b64": "not base64!!"})
+        self.assertEqual(status, 400)
+        status, _ = self._json("/api/analyze-image", body={})
+        self.assertEqual(status, 400)
+        # No target face and no width means no way to convert pixels to mm.
+        status, _ = self._json("/api/analyze-image", body={
+            "image_b64": base64.b64encode(_target_png()).decode()})
+        self.assertEqual(status, 400)
+
+    def test_analyze_image_finds_the_hits_a_drive_photo_would_carry(self):
+        status, r = self._json("/api/analyze-image", body={
+            "image_b64": base64.b64encode(_target_png()).decode(),
+            "target": "Airsoft Practice 10m", "mode": "marker", "color": "red",
+        })
+        self.assertEqual(status, 200)
+        got = sorted((s["x_mm"], s["y_mm"]) for s in r["shots"])
+        self.assertEqual(len(got), len(MARKS))
+        for (ex, ey), (gx, gy) in zip(sorted(MARKS), got):
+            self.assertAlmostEqual(gx, ex, delta=3.0)
+            self.assertAlmostEqual(gy, ey, delta=3.0)
 
     def test_add_tool(self):
         status, r = self._json("/api/tool", body={"name": "Backup Pistol",
