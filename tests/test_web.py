@@ -242,5 +242,95 @@ class TestWeb(unittest.TestCase):
         self.assertEqual(status, 400)
 
 
+class TestWebExtras(TestWeb):
+    """Goals, deletion, export, printing and installing -- from the phone."""
+
+    def test_goals_can_be_set_and_removed(self):
+        status, out = self._json("/api/goal", {"action": "add",
+                                               "metric": "group_size",
+                                               "target": 40})
+        self.assertEqual(status, 200)
+        self.assertEqual(len(out["goals"]), 1)
+        gid = out["goals"][0]["id"]
+        self.assertEqual(self._json("/api/state")[1]["goals"][0]["target"], 40.0)
+        self.assertEqual(self._json("/api/goal", {"action": "rm", "id": gid})[0], 200)
+        self.assertEqual(self._json("/api/state")[1]["goals"], [])
+
+    def test_goal_input_is_checked(self):
+        for body in ({"action": "add", "metric": "evil", "target": 1},
+                     {"action": "add", "metric": "group_size"},
+                     {"action": "add", "metric": "group_size", "target": 1,
+                      "tool_id": "ghost"},
+                     {"action": "rm", "id": "nope"},
+                     {"action": "hack"}):
+            self.assertEqual(self._json("/api/goal", body)[0], 400, body)
+
+    def test_session_can_be_deleted(self):
+        self.assertEqual(self._json("/api/session/delete", {"id": "s1"})[0], 200)
+        self.assertEqual(self._json("/api/state")[1]["sessions"], [])
+        self.assertEqual(self._json("/api/session/delete", {"id": "s1"})[0], 400)
+
+    def test_printable_face(self):
+        status, raw = self._call("/target.html?face=Practice%20Face&paper=a4")
+        self.assertEqual(status, 200)
+        self.assertIn(b"210.000mm", raw)
+        for bad in ("?face=Nope", "?face=Practice%20Face&paper=zzz",
+                    "?face=Practice%20Face&distance=abc",
+                    "?face=Practice%20Face&distance=99999"):
+            self.assertEqual(self._call("/target.html" + bad)[0], 400, bad)
+
+    def test_export_downloads(self):
+        status, raw = self._call("/export.csv")
+        self.assertEqual(status, 200)
+        self.assertIn(b"s1", raw)
+        self.assertEqual(self._call("/export.json")[0], 200)
+
+    def test_installable_on_a_phone(self):
+        status, man = self._json("/manifest.webmanifest")
+        self.assertEqual(status, 200)
+        self.assertEqual(man["display"], "standalone")
+        # The key rides in start_url or the installed icon opens a 403.
+        self.assertIn(TOKEN, man["start_url"])
+        _, page = self._call("/")
+        self.assertIn(b'rel="manifest"', page)
+        self.assertIn(b'crossorigin="use-credentials"', page)
+
+    def test_icon_is_open_but_nothing_else_is(self):
+        # The manifest fetches the icon without credentials, so it has to be.
+        self.assertEqual(self._call("/icon.png", token=None)[0], 200)
+        self.assertEqual(self._call("/export.csv", token=None)[0], 403)
+        self.assertEqual(self._call("/target.html?face=Practice%20Face",
+                                    token=None)[0], 403)
+
+    def test_stats_say_what_to_do_about_the_zero_error(self):
+        db = Database.load(self.path)
+        db.add_tool(Tool("scoped", "Scoped", category="Other",
+                         sight_click_mrad=0.1))
+        db.save()
+        _, out = self._json("/api/stats", {
+            "shots": [{"x_mm": 12, "y_mm": 8}, {"x_mm": 14, "y_mm": 10}],
+            "distance_m": 10, "tool_id": "scoped"})
+        self.assertIn("clicks left", out["correction"])
+        # No tool, no clicks -- but still an answer.
+        _, plain = self._json("/api/stats", {
+            "shots": [{"x_mm": 12, "y_mm": 8}], "distance_m": 10})
+        self.assertIn("MOA", plain["correction"])
+
+    def test_access_key_survives_a_restart_but_never_syncs(self):
+        # A key that changed every run would break the phone's home-screen icon.
+        srv = web.make_server(self.path, "127.0.0.1", 0)
+        try:
+            first = srv.token
+        finally:
+            srv.server_close()
+        srv2 = web.make_server(self.path, "127.0.0.1", 0)
+        try:
+            self.assertEqual(srv2.token, first)
+        finally:
+            srv2.server_close()
+        bundle = web._bundle(Database.load(self.path))
+        self.assertNotIn("web_key", bundle["settings"])
+
+
 if __name__ == "__main__":
     unittest.main()

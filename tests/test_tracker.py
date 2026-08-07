@@ -70,6 +70,43 @@ class TestTracker(unittest.TestCase):
         by_w = tracker.progress_by_tool(sessions, tools)
         self.assertEqual(by_w["w1"].scope_name, "AEG One")
 
+    def test_parse_click_reads_what_is_on_the_turret(self):
+        self.assertAlmostEqual(tracker.parse_click("0.1mrad"), 0.1)
+        self.assertAlmostEqual(tracker.parse_click("0.1 MRAD"), 0.1)
+        self.assertAlmostEqual(tracker.parse_click("1/4moa"), 0.25 / 3.43774677)
+        self.assertAlmostEqual(tracker.parse_click("0.25moa"), 0.25 / 3.43774677)
+        self.assertAlmostEqual(tracker.parse_click("1cm@100m"), 0.1)
+        for bad in ("", "moa", "4", "1/0moa", "-1mrad", "0mrad", "9999moa",
+                    "0.1 clicks", "drop table"):
+            with self.assertRaises(ValueError, msg=bad):
+                tracker.parse_click(bad)
+
+    def test_sight_correction_points_back_at_the_aim_mark(self):
+        stats = analyze_group([Shot(12.0, 8.0), Shot(14.0, 10.0), Shot(13.0, 6.0)])
+        corr = tracker.sight_correction(stats, distance_m=10.0, click_mrad=0.1)
+        # Group sits high and right, so the sight has to come down and left.
+        self.assertLess(corr["dx_mm"], 0)
+        self.assertLess(corr["dy_mm"], 0)
+        self.assertEqual(corr["horizontal"], "left")
+        self.assertEqual(corr["vertical"], "down")
+        self.assertAlmostEqual(corr["mrad_x"], 1.3, places=2)   # 13 mm at 10 m
+        self.assertEqual(corr["clicks_x"], 13)                  # at 0.1 mrad
+        text = tracker.format_correction(corr, 10.0)
+        self.assertIn("13 clicks left", text)
+        self.assertIn("8 clicks down", text)
+
+    def test_correction_degrades_gracefully(self):
+        stats = analyze_group([Shot(12.0, 0.0), Shot(14.0, 0.0)])
+        # No click value: angles. No distance either: millimetres.
+        self.assertIn("MOA", tracker.format_correction(
+            tracker.sight_correction(stats, 10.0), 10.0))
+        self.assertIn("13.0 mm left", tracker.format_correction(
+            tracker.sight_correction(stats)))
+        # A centred group gets no advice at all.
+        centred = analyze_group([Shot(-2.0, 0.0), Shot(2.0, 0.0)])
+        self.assertEqual(tracker.format_correction(
+            tracker.sight_correction(centred, 10.0), 10.0), "")
+
     def test_empty_report(self):
         rep = tracker.build_report([], "overall", "All")
         self.assertEqual(rep.session_count, 0)

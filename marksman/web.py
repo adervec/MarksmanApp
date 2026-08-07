@@ -33,8 +33,11 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import parse_qs, urlparse
 
 from . import drills as drills_mod
+from . import exporter as exporter_mod
 from . import goals as goals_mod
+from . import logo as logo_mod
 from . import packs as packs_mod
+from . import render as render_mod
 from . import targets as targets_mod
 from . import tracker
 from .goals import METRICS
@@ -185,6 +188,7 @@ def _state(db: Database) -> Dict[str, Any]:
         "goals": goals_mod.summary(db),
         "sessions": [_sess_row(db, s) for s in sessions[:50]],
         "categories": packs_mod.categories(db),
+        "goalMetrics": sorted(METRICS),
         "packs": pack_rows,
         "terms": {w: packs_mod.term(w, db) for w in ("tool", "tools",
                                                      "projectile", "projectiles")},
@@ -202,11 +206,16 @@ def _stats(db: Database, body: Dict[str, Any]) -> Dict[str, Any]:
     tname = str(body.get("target") or "")
     spec = _target(db, tname) if tname else None
     st = analyze_group(shots, target=spec)
+    dist = _num(body.get("distance_m"), "distance_m")
+    tool = db.get_tool(str(body.get("tool_id") or ""))
+    correction = tracker.format_correction(
+        tracker.sight_correction(st, dist, tool.sight_click_mrad if tool else None),
+        dist)
     return {
+        "correction": correction,
         "n": st.shot_count,
         "group_mm": st.extreme_spread_mm,
-        "group_mrad": tracker.mm_to_mrad(st.extreme_spread_mm,
-                                         _num(body.get("distance_m"), "distance_m")),
+        "group_mrad": tracker.mm_to_mrad(st.extreme_spread_mm, dist),
         "mean_radius_mm": st.mean_radius_mm,
         "zero_mm": st.poa_offset_mm,
         "cx": st.center_x_mm, "cy": st.center_y_mm,
@@ -323,7 +332,8 @@ def _bundle(db: Database) -> Dict[str, Any]:
         "app": "marksman", "version": 1,
         "tools": [t.to_dict() for t in db.tools.values()],
         "sessions": [s.to_dict() for s in db.sessions.values()],
-        "settings": db.settings,
+        # The access key is this machine's, not part of the dataset.
+        "settings": {k: v for k, v in db.settings.items() if k != "web_key"},
     }
 
 
@@ -366,6 +376,75 @@ def _sync(server: ThreadingHTTPServer, body: Dict[str, Any]) -> Dict[str, Any]:
     return {"bundle": merged, "addedTools": added_tools,
             "addedSessions": added_sessions,
             "sessions": len(merged["sessions"])}
+
+
+def _printable(db: Database, query: Dict[str, List[str]]) -> bytes:
+    """A true-scale printable target face, ready for the browser's print dialog."""
+    spec = _target(db, (query.get("face") or [""])[0])
+    raw = (query.get("distance") or [""])[0]
+    try:
+        distance = float(raw) if raw else None
+        if distance is not None and not (0 < distance <= 1000):
+            raise ValueError("distance out of range")
+        page = render_mod.target_html(spec, distance_m=distance,
+                                      paper=(query.get("paper") or ["a4"])[0])
+    except (KeyError, ValueError) as e:
+        raise _Bad(str(e))
+    return page.encode("utf-8")
+
+
+def _goal(server: ThreadingHTTPServer, body: Dict[str, Any]) -> Dict[str, Any]:
+    """Add or remove a practice goal (the desktop app's Goals tab, on a phone)."""
+    action = str(body.get("action") or "")
+    with server.lock:
+        db = Database.load(server.db_path)
+        stored = list(db.settings.get("goals") or [])
+        if action == "add":
+            metric = str(body.get("metric") or "")
+            if metric not in METRICS:
+                raise _Bad("unknown metric %r (choose from %s)"
+                           % (metric, ", ".join(METRICS)))
+            target = _num(body.get("target"), "target", 0.0, 100000.0)
+            if target is None:
+                raise _Bad("a goal needs a target value")
+            tool_id = str(body.get("tool_id") or "")
+            if tool_id and tool_id not in db.tools:
+                raise _Bad("unknown tool")
+            stored.append(goals_mod.new_goal(metric, target, tool_id or None,
+                                             str(body.get("note") or "")[:200]))
+        elif action == "rm":
+            gid = str(body.get("id") or "")
+            stored = [g for g in stored if g.get("id") != gid]
+            if len(stored) == len(db.settings.get("goals") or []):
+                raise _Bad("no such goal")
+        else:
+            raise _Bad("unknown action %r" % action)
+        db.settings["goals"] = stored
+        db.save()
+        return {"goals": goals_mod.summary(db)}
+
+
+def _delete_session(server: ThreadingHTTPServer, body: Dict[str, Any]) -> Dict[str, Any]:
+    """Drop one session. Mistyped shots at the field shouldn't need a laptop."""
+    sid = str(body.get("id") or "")
+    with server.lock:
+        db = Database.load(server.db_path)
+        if sid not in db.sessions:
+            raise _Bad("no such session")
+        del db.sessions[sid]
+        db.save()
+    return {"deleted": sid}
+
+
+_ICON = []          # generated once, then reused
+
+
+def _icon_png() -> bytes:
+    """The app icon, drawn by the logo module -- no asset file to ship."""
+    if not _ICON:
+        from . import imageio
+        _ICON.append(imageio.encode_png(logo_mod.make_logo(512)))
+    return _ICON[0]
 
 
 def _add_tool(server: ThreadingHTTPServer, body: Dict[str, Any]) -> Dict[str, Any]:
@@ -414,7 +493,14 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self) -> None:
-        path = urlparse(self.path).path
+        parsed = urlparse(self.path)
+        path = parsed.path
+        if path == "/icon.png":
+            # No user data in a logo, and the manifest fetches it without
+            # credentials -- so this one is open.
+            self._send(200, _icon_png(), "image/png",
+                       [("Cache-Control", "max-age=86400")])
+            return
         if not self._authed():
             self._send(403, b"Missing or bad access code. Open the full URL "
                             b"printed by 'marksman web'.", "text/plain; charset=utf-8")
@@ -425,8 +511,43 @@ class Handler(BaseHTTPRequestHandler):
                        [("Set-Cookie", cookie)])
         elif path == "/api/state":
             self._send(200, _state(Database.load(self.server.db_path)))
+        elif path == "/manifest.webmanifest":
+            self._send(200, json.dumps(self._manifest()).encode("utf-8"),
+                       "application/manifest+json")
+        elif path in ("/target.html", "/export.csv", "/export.json"):
+            db = Database.load(self.server.db_path)
+            try:
+                if path == "/target.html":
+                    self._send(200, _printable(db, parse_qs(parsed.query)),
+                               "text/html; charset=utf-8")
+                    return
+                csv = path.endswith(".csv")
+                data = (exporter_mod.to_csv(db) if csv
+                        else exporter_mod.to_json(db)).encode("utf-8")
+                name = "marksman-sessions." + ("csv" if csv else "json")
+                self._send(200, data,
+                           ("text/csv" if csv else "application/json")
+                           + "; charset=utf-8",
+                           [("Content-Disposition",
+                             'attachment; filename="%s"' % name)])
+            except _Bad as e:
+                self._send(400, str(e).encode("utf-8"),
+                           "text/plain; charset=utf-8")
         else:
             self._send(404, {"error": "not found"})
+
+    def _manifest(self) -> Dict[str, Any]:
+        """Enough for "add to home screen" to give a real app icon."""
+        return {
+            "name": "Marksman", "short_name": "Marksman",
+            "description": "Marksmanship drills and progress tracking.",
+            # The key rides along so an installed shortcut keeps working.
+            "start_url": "/?k=" + self.server.token,
+            "scope": "/", "display": "standalone", "orientation": "any",
+            "background_color": "#12161a", "theme_color": "#12161a",
+            "icons": [{"src": "/icon.png", "sizes": "512x512",
+                       "type": "image/png", "purpose": "any maskable"}],
+        }
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path
@@ -454,6 +575,10 @@ class Handler(BaseHTTPRequestHandler):
                 resp = _analyze_image(Database.load(self.server.db_path), body)
             elif path == "/api/sync":
                 resp = _sync(self.server, body)
+            elif path == "/api/goal":
+                resp = _goal(self.server, body)
+            elif path == "/api/session/delete":
+                resp = _delete_session(self.server, body)
             else:
                 self._send(404, {"error": "not found"})
                 return
@@ -482,9 +607,18 @@ def make_server(db_path: str = DEFAULT_DB_PATH, host: str = "",
                 ) -> ThreadingHTTPServer:
     httpd = ThreadingHTTPServer((host, port), Handler)
     httpd.db_path = db_path
-    httpd.token = token or secrets.token_urlsafe(8)
     httpd.lock = threading.Lock()
-    packs_mod.load(Database.load(db_path))     # content: drills, faces, terms
+    db = Database.load(db_path)
+    if not token:
+        # Keep the key across runs, or every restart breaks the phone's
+        # bookmark and its installed icon. Rotate it with --new-key.
+        token = db.settings.get("web_key")
+        if not token:
+            token = secrets.token_urlsafe(8)
+            db.settings["web_key"] = token
+            db.save()
+    httpd.token = token
+    packs_mod.load(db)                         # content: drills, faces, terms
     return httpd
 
 
@@ -501,8 +635,10 @@ def serve(db_path: str = DEFAULT_DB_PATH, host: str = "",
     print("  this machine:  http://127.0.0.1:%d/?k=%s" % (bound, httpd.token))
     print("  your phone:    http://%s:%d/?k=%s   (same Wi-Fi)"
           % (_lan_ip(), bound, httpd.token))
-    print("The link carries a one-run access code; anyone on your network with")
-    print("the full link can view and add sessions. Don't expose it to the internet.")
+    print("The link carries an access code that stays the same across runs, so")
+    print("you can bookmark it or add it to your phone's home screen. Anyone on")
+    print("your network with the full link can view and add sessions -- don't")
+    print("expose it to the internet. Rotate it with: marksman web --new-key")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
@@ -522,6 +658,13 @@ PAGE = r"""<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#12161a">
+<!-- use-credentials: the manifest is behind the same access code as the app. -->
+<link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials">
+<link rel="apple-touch-icon" href="/icon.png">
+<link rel="icon" href="/icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Marksman">
 <title>Marksman</title>
 <style>
 :root{--bg:#12161a;--card:#1b2127;--line:#2a323b;--fg:#e8e6e1;--mut:#8a949e;
@@ -588,6 +731,11 @@ summary{cursor:pointer}
   justify-content:space-between;gap:10px;align-items:center}
 .filerow.done{color:var(--mut)}
 nav button{font-size:13px}
+.rowbtns{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.x{background:none;border:1px solid var(--line);color:var(--mut);width:auto;
+   border-radius:6px;padding:4px 9px;font-size:13px}
+.x:hover{color:var(--bad)}
+.linkrow{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:14px}
 </style>
 </head>
 <body>
@@ -601,7 +749,9 @@ nav button{font-size:13px}
 <section id="home" class="on">
   <div class="card"><span id="tp" class="big"></span><div id="tpsub" class="muted"></div></div>
   <h2>Today's plan</h2><div id="plan"></div>
-  <div id="goalsWrap"><h2>Goals</h2><div id="goals" class="card"></div></div>
+  <div class="item" style="border:0;padding:0"><h2>Goals</h2>
+    <button class="ghost small" id="addGoal">+ goal</button></div>
+  <div id="goals" class="card"></div>
   <h2>Recent</h2><div id="recent" class="card"></div>
   <h2>Equipment packs</h2><div id="packs" class="card"></div>
   <div id="safety"></div>
@@ -626,11 +776,20 @@ nav button{font-size:13px}
       <div><label>Target face</label><select id="target"></select></div>
       <div><label>Distance m</label><input id="dist" type="number" inputmode="decimal" min="1" max="1000"></div>
     </div>
+    <div class="row">
+      <div><label>Print the face</label>
+        <select id="paper"><option value="a4">A4</option>
+          <option value="letter">Letter</option><option value="a3">A3</option>
+          <option value="a5">A5</option></select></div>
+      <a class="btn ghost small" id="printFace" target="_blank" rel="noopener"
+         style="align-self:end;text-align:center;text-decoration:none;padding:10px 12px"
+         >Print at true size</a>
+    </div>
     <label>Date</label><input id="date" type="date">
   </div>
   <div class="card">
     <canvas id="cv" height="420"></canvas>
-    <p id="stats" class="muted" style="text-align:center;margin:8px 0">Tap the target to place shots.</p>
+    <p id="stats" class="muted" style="text-align:center;margin:8px 0;white-space:pre-line">Tap the target to place shots.</p>
     <div class="row">
       <button class="ghost" id="undo">Undo</button>
       <button class="ghost" id="clear">Clear</button>
@@ -643,7 +802,26 @@ nav button{font-size:13px}
   </div>
 </section>
 
-<section id="sessions"><div id="sessList" class="card"></div></section>
+<section id="sessions">
+  <div class="card">
+    <div class="row">
+      <div><label>Trend</label><select id="metric">
+        <option value="group_mm">Group size (mm)</option>
+        <option value="group_mrad">Group size (mrad)</option>
+        <option value="mean_radius_mm">Mean radius (mm)</option>
+        <option value="zero_mm">Zero error (mm)</option>
+        <option value="score_pct">Score (%)</option>
+      </select></div>
+      <div><label>Tool</label><select id="chartTool"></select></div>
+    </div>
+    <div id="chart"></div>
+    <div id="chartSub" class="muted" style="text-align:center"></div>
+  </div>
+  <div id="sessList" class="card"></div>
+  <div class="linkrow"><a href="/export.csv">Export CSV</a>
+    <a href="/export.json">Export JSON</a></div>
+  <p class="muted" style="margin-top:8px">Tap a session's &times; to delete it.</p>
+</section>
 
 <section id="drive">
   <h2>Sessions across devices</h2>
@@ -749,7 +927,7 @@ function tierBadge(tier){
   if (tier) b.style.background = TIER_COLOR[tier];
   return b;
 }
-function sessLine(box, s){
+function sessLine(box, s, canDelete){
   const row = el("div", "item");
   const left = el("div");
   left.appendChild(el("div", null, s.date + " · " + s.tool + (s.drill ? " · " + s.drill : "")));
@@ -759,6 +937,18 @@ function sessLine(box, s){
   if (s.score_pct != null) sub += " · " + fmt(s.score_pct, 0) + "%";
   left.appendChild(el("div", "muted", sub));
   row.appendChild(left);
+  if (canDelete){
+    const btns = el("div", "rowbtns");
+    const del = el("button", "x", "×");
+    del.title = "delete this session";
+    del.onclick = async () => {
+      if (!confirm("Delete the session from " + s.date + "? This cannot be undone.")) return;
+      try { await api("/api/session/delete", {id: s.id}); await load(); toast("Deleted"); }
+      catch (e) { toast(e.message); }
+    };
+    btns.appendChild(del);
+    row.appendChild(btns);
+  }
   box.appendChild(row);
 }
 
@@ -784,14 +974,24 @@ function renderHome(){
     plan.appendChild(card);
   });
 
-  $("goalsWrap").style.display = S.goals.length ? "" : "none";
   const g = $("goals"); g.textContent = "";
+  if (!S.goals.length) g.appendChild(el("div", "muted",
+    "No goals yet — set one with + goal."));
   S.goals.forEach(x => {
     const row = el("div", "item");
     row.appendChild(el("div", null, x.metric + " " + (x.lowerIsBetter ? "≤ " : "≥ ")
                        + x.target + " " + x.unit + " · " + x.scope));
-    row.appendChild(el("div", x.met ? "ok" : "muted",
+    const right = el("div", "rowbtns");
+    right.appendChild(el("div", x.met ? "ok" : "muted",
                        x.met == null ? "no data" : (x.met ? "met ✓" : "best " + fmt(x.best))));
+    const del = el("button", "x", "×");
+    del.title = "remove this goal";
+    del.onclick = async () => {
+      try { await api("/api/goal", {action: "rm", id: x.id}); await load(); }
+      catch (e) { toast(e.message); }
+    };
+    right.appendChild(del);
+    row.appendChild(right);
     g.appendChild(row);
   });
 
@@ -874,11 +1074,60 @@ function renderDrills(){
   });
 }
 
+// ponytail: charts the sessions the state call already sent (the most recent
+// 50). Ask the server for a longer series only if anyone wants more history.
+function renderChart(){
+  const metric = $("metric").value, who = $("chartTool").value;
+  const lower = metric !== "score_pct";
+  const rows = S.sessions
+    .filter(s => (!who || s.tool === who) && s[metric] != null)
+    .slice().reverse();                       // oldest first
+  const box = $("chart"); box.textContent = "";
+  const sub = $("chartSub");
+  if (rows.length < 2){
+    sub.textContent = rows.length ? "One session — log another to see a trend."
+                                  : "Nothing logged for this yet.";
+    return;
+  }
+  const vals = rows.map(r => r[metric]);
+  const lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+  const span = (hi - lo) || Math.abs(hi) || 1;
+  const W = 300, H = 110, pad = 6;
+  const x = i => pad + i * (W - 2 * pad) / (rows.length - 1);
+  const y = v => H - pad - (v - lo + span * 0.08) / (span * 1.16) * (H - 2 * pad);
+  const pts = vals.map((v, i) => x(i).toFixed(1) + "," + y(v).toFixed(1)).join(" ");
+  const best = lower ? lo : hi;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+  svg.setAttribute("style", "width:100%;height:auto;display:block");
+  svg.innerHTML =
+    "<polyline fill='none' stroke='#e8b34b' stroke-width='2' " +
+      "stroke-linejoin='round' points='" + pts + "'/>" +
+    "<line x1='" + pad + "' x2='" + (W - pad) + "' y1='" + y(best).toFixed(1) +
+      "' y2='" + y(best).toFixed(1) + "' stroke='#7fc97f' stroke-width='1' " +
+      "stroke-dasharray='3 3'/>" +
+    vals.map((v, i) => "<circle cx='" + x(i).toFixed(1) + "' cy='" +
+      y(v).toFixed(1) + "' r='2.5' fill='#e8b34b'/>").join("");
+  box.appendChild(svg);
+  const first = vals[0], last = vals[vals.length - 1];
+  const better = lower ? last < first : last > first;
+  sub.textContent = rows.length + " sessions · best " + fmt(best)
+    + " · latest " + fmt(last)
+    + " · " + (last === first ? "flat" : (better ? "improving" : "slipping"));
+}
+
 function renderSessions(){
   const box = $("sessList"); box.textContent = "";
   if (!S.sessions.length) box.appendChild(el("div", "muted", "No sessions yet."));
-  S.sessions.forEach(s => sessLine(box, s));
+  S.sessions.forEach(s => sessLine(box, s, true));
+  const keep = $("chartTool").value;
+  fillSelect($("chartTool"), [{name: "All tools"}].concat(S.tools),
+             t => t.name === "All tools" ? "" : t.name, t => t.name);
+  if (keep) $("chartTool").value = keep;
+  renderChart();
 }
+$("metric").onchange = renderChart;
+$("chartTool").onchange = renderChart;
 
 function fillSelect(sel, items, value, label){
   sel.textContent = "";
@@ -966,11 +1215,13 @@ async function refreshShots(){
   if (!shots.length){ lastStats = null; line.textContent = "Tap the target to place shots."; return; }
   try {
     lastStats = await api("/api/stats", {shots: shots, target: $("target").value,
-                                         distance_m: $("dist").value || null});
+                                         distance_m: $("dist").value || null,
+                                         tool_id: $("tool").value || ""});
     let t = lastStats.n + " shots · group " + fmt(lastStats.group_mm) + " mm";
     if (lastStats.group_mrad != null) t += " (" + fmt(lastStats.group_mrad, 2) + " mrad)";
     t += " · mean r " + fmt(lastStats.mean_radius_mm) + " · zero off " + fmt(lastStats.zero_mm) + " mm";
     if (lastStats.score_pct != null) t += " · " + fmt(lastStats.score_pct, 0) + "%";
+    if (lastStats.correction) t += "\n" + lastStats.correction;
     line.textContent = t;
     drawTarget();
   } catch (e) {
@@ -990,14 +1241,38 @@ $("cv").addEventListener("pointerdown", e => {
   shots.push({x_mm: +x.toFixed(1), y_mm: +y.toFixed(1)});
   refreshShots();
 });
+function updatePrintLink(){
+  const q = "face=" + encodeURIComponent($("target").value)
+          + "&paper=" + encodeURIComponent($("paper").value)
+          + ($("dist").value ? "&distance=" + encodeURIComponent($("dist").value) : "");
+  $("printFace").href = "/target.html?" + q;
+}
+$("paper").onchange = updatePrintLink;
+
+$("addGoal").onclick = async () => {
+  const metric = prompt("Goal metric — one of: " + S.goalMetrics.join(", "), "group_size");
+  if (!metric) return;
+  const target = prompt("Target value for " + metric + " (lower is better for "
+                        + "everything except score):");
+  if (!target) return;
+  try {
+    await api("/api/goal", {action: "add", metric: metric.trim(),
+                            target: parseFloat(target),
+                            tool_id: $("tool").value || ""});
+    await load();
+    toast("Goal added");
+  } catch (e) { toast(e.message); }
+};
+
 $("undo").onclick = () => { shots.pop(); refreshShots(); };
 $("clear").onclick = () => { shots = []; refreshShots(); };
 $("drill").onchange = () => applyDrill($("drill").value);
 $("target").onchange = () => {
   curTarget = S.targets.find(t => t.name === $("target").value);
+  updatePrintLink();
   refreshShots();
 };
-$("dist").onchange = refreshShots;
+$("dist").onchange = () => { updatePrintLink(); refreshShots(); };
 
 // Orientation: a saved setting decides the layout; the accelerometer doesn't.
 // "auto" follows the device; "portrait"/"landscape" hold that layout and
@@ -1072,6 +1347,7 @@ async function load(){
   if (keepTool) $("tool").value = keepTool;
   if (keepTarget) { $("target").value = keepTarget; curTarget = S.targets.find(t => t.name === keepTarget) || curTarget; }
   if (keepDrill) $("drill").value = keepDrill;
+  updatePrintLink();
 }
 
 /* ---------------- Google Drive ----------------

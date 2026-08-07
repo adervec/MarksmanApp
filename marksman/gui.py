@@ -18,7 +18,9 @@ from __future__ import annotations
 
 import os
 import sys
+import tempfile
 import traceback
+import webbrowser
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
@@ -814,6 +816,7 @@ class App(tk.Tk):
         row = ttk.Frame(form, style="Panel.TFrame")
         row.pack(fill="x", pady=(14, 0))
         ttk.Button(row, text="From image…", command=self._load_image).pack(side="left")
+        ttk.Button(row, text="Print face…", command=self._print_face).pack(side="left", padx=4)
         ttk.Button(row, text="Undo", command=lambda: self.canvas.undo()).pack(side="left", padx=4)
         ttk.Button(row, text="Clear", command=lambda: self.canvas.clear()).pack(side="left")
         ttk.Button(form, text="Save session", style="Accent.TButton",
@@ -884,7 +887,38 @@ class App(tk.Tk):
         if stats.total_score is not None:
             parts.append("score %s/%s" % (_fmt(stats.total_score),
                                           _fmt(stats.max_possible_score, 0)))
-        self._stats_lbl.configure(text="   •   ".join(parts))
+        advice = tracker.format_correction(
+            tracker.sight_correction(
+                stats, dist, tool.sight_click_mrad if tool else None), dist)
+        text = "   •   ".join(parts)
+        if advice:
+            text += "\n" + advice
+        self._stats_lbl.configure(text=text)
+
+    def _print_face(self) -> None:
+        """Write the chosen face at true scale and open it for printing."""
+        try:
+            spec = targets_mod.get_target(self._log_target.get())
+        except KeyError:
+            messagebox.showwarning("No face", "Pick a target face first.")
+            return
+        paper = self.db.settings.get("paper", "a4")
+        try:
+            dist = float(self._log_dist.get()) if self._log_dist.get() else None
+        except ValueError:
+            dist = None
+        try:
+            page = render.target_html(spec, distance_m=dist, paper=paper)
+        except (KeyError, ValueError) as e:
+            messagebox.showerror("Can't print that face", str(e))
+            return
+        path = os.path.join(tempfile.gettempdir(),
+                            "marksman-face-%s.html" % abs(hash(spec.name)))
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(page)
+        webbrowser.open("file:///" + path.replace("\\", "/"))
+        self.say("Opened %s for printing -- print at 100%%, not 'fit to page'."
+                 % spec.name)
 
     def _load_image(self) -> None:
         path = filedialog.askopenfilename(
@@ -1254,6 +1288,7 @@ class App(tk.Tk):
         tid, name = tk.StringVar(), tk.StringVar()
         cat = tk.StringVar(value="Other")
         bb = tk.StringVar(value="6.0")
+        clickvar = tk.StringVar(value="")     # e.g. "1/4moa", "0.1mrad"
 
         for label, var, width in (("Id", tid, 12), ("Name", name, 22)):
             ttk.Label(form, text=label, style="Panel.TLabel").pack(side="left")
@@ -1264,6 +1299,9 @@ class App(tk.Tk):
         ttk.Label(form, text=_term("projectile").title() + " mm",
                   style="Panel.TLabel").pack(side="left")
         ttk.Entry(form, textvariable=bb, width=6).pack(side="left", padx=6)
+        # Optional: turns a zero error into "4 clicks left" on the Log tab.
+        ttk.Label(form, text="Sight click", style="Panel.TLabel").pack(side="left")
+        ttk.Entry(form, textvariable=clickvar, width=9).pack(side="left", padx=6)
 
         tv = self._tree(root, ("id", "name", "category", "bb mm", "sessions"),
                         (110, 200, 130, 70, 80), height=14)
@@ -1273,9 +1311,12 @@ class App(tk.Tk):
                 messagebox.showwarning("Tool", "Id and name are both required.")
                 return
             try:
+                click_mrad = (tracker.parse_click(clickvar.get())
+                              if clickvar.get().strip() else None)
                 self.db.add_tool(Tool(tid.get().strip(), name.get().strip(),
                                       category=cat.get(),
-                                      projectile_mm=float(bb.get()) if bb.get() else None))
+                                      projectile_mm=float(bb.get()) if bb.get() else None,
+                                      sight_click_mrad=click_mrad))
             except ValueError as e:
                 messagebox.showwarning("Tool", str(e))
                 return

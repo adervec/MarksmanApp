@@ -15,6 +15,7 @@ from typing import List, Optional
 
 from .models import GroupStats
 from .theme import DEFAULT_SPARK, Painter, plain_painter
+from . import tracker
 from .tracker import MetricTrend, ProgressReport
 
 _SPARK = DEFAULT_SPARK   # ascii-safe ramp, low -> high
@@ -57,8 +58,13 @@ def _fmt(value: Optional[float], digits: int = 1) -> str:
 
 def format_group_stats(stats: GroupStats, target_name: str = "",
                        distance_m: Optional[float] = None,
-                       painter: Optional[Painter] = None) -> str:
-    """One analysed target, as a readable block."""
+                       painter: Optional[Painter] = None,
+                       click_mrad: Optional[float] = None) -> str:
+    """One analysed target, as a readable block.
+
+    ``click_mrad`` is the sight's click value, if the tool declares one; it
+    turns the zero error into a number of clicks to dial.
+    """
     p = painter or plain_painter()
     lines = []
     lines.append(p.label("Shots analysed : ") + p.value("%d" % stats.shot_count))
@@ -93,6 +99,11 @@ def format_group_stats(stats: GroupStats, target_name: str = "",
                  + p.value(_fmt(stats.poa_offset_mm)) + " " + p.unit("mm")
                  + " at " + p.value(_fmt(stats.poa_offset_angle_deg, 0))
                  + " " + p.unit("deg"))
+    advice = tracker.format_correction(
+        tracker.sight_correction(stats, distance_m, click_mrad), distance_m)
+    if advice:
+        lines.append("  " + p.label("Sight correction            : ")
+                     + p.accent(advice))
     if stats.total_score is not None:
         pct = (stats.total_score / stats.max_possible_score * 100.0
                if stats.max_possible_score else 0.0)

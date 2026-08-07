@@ -252,6 +252,10 @@ class Tool:
     # Projectile diameter in mm; used to give shots their physical size when
     # scoring "edge breaks the line" and when detecting impacts.
     projectile_mm: Optional[float] = None
+    # One click of this tool's sight, in milliradians -- lets the app turn a
+    # zero error into "4 clicks left". None for anything without an adjustable
+    # sight, which is most things.
+    sight_click_mrad: Optional[float] = None
     notes: str = ""
 
     def __post_init__(self) -> None:
@@ -271,6 +275,7 @@ class Tool:
             projectile=d.get("projectile", d.get("bb", "")),
             is_powered=d.get("is_powered", d.get("is_gas", False)),
             projectile_mm=d.get("projectile_mm", d.get("bb_mm")),
+            sight_click_mrad=d.get("sight_click_mrad"),
             notes=d.get("notes", ""),
         )
 

@@ -87,6 +87,21 @@ Target faces here are generic practice bullseyes with approximate ring sizes;
 image analysis and scoring are approximate. **Do not** rely on this software for
 official or competitive scoring — use that event's sanctioned target and rules.
 
+Faces printed by this app are drawn at their stated size, but **what actually
+comes out of your printer is not something this software can verify** — page
+scaling, margins and driver settings all change it. Measure the ruler printed on
+each sheet before relying on any measurement taken against that face. Printed
+faces are practice targets, not sanctioned competition targets.
+
+## Sight-correction figures are arithmetic, not coaching
+
+Where the app suggests moving a sight, it is arithmetic on the group you gave
+it and the click value you typed in — nothing more. It does not know your
+equipment, your mounts, your hop-up, your rest or the conditions, cannot tell a
+sighting error from a technique error, and is **not** instruction on adjusting,
+modifying or servicing anything. Follow your equipment's own documentation and
+the people who taught you.
+
 ## Accuracy of information & third‑party references
 
 Fields, shops, products, organizations, and figures mentioned anywhere in this

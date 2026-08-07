@@ -22,6 +22,8 @@ Two normalisations make sessions shot under different conditions comparable:
 
 from __future__ import annotations
 
+import math
+import re
 from dataclasses import dataclass, asdict, field
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
@@ -40,6 +42,95 @@ def mm_to_mrad(size_mm: float, distance_m: Optional[float]) -> Optional[float]:
 
 def mrad_to_moa(mrad: Optional[float]) -> Optional[float]:
     return None if mrad is None else mrad * _MOA_PER_MRAD
+
+
+def parse_click(text: str) -> float:
+    """Parse a sight's click value into milliradians.
+
+    Accepts what is written on the turret: ``0.1mrad``, ``1/4 MOA``,
+    ``0.25moa``, ``2cm@100m``.  Returns mrad.
+    """
+    raw = str(text or "").strip().lower().replace(" ", "")
+    if not raw:
+        raise ValueError("empty click value")
+    match = re.match(r"^(\d+(?:\.\d+)?)(?:/(\d+(?:\.\d+)?))?"
+                     r"(mrad|mil|moa|cm@100m|mm@100m)$", raw)
+    if not match:
+        raise ValueError(
+            "Bad click value %r. Write it as it appears on the turret, e.g. "
+            "'0.1mrad', '1/4moa' or '0.25moa'." % text)
+    value = float(match.group(1))
+    if match.group(2):
+        divisor = float(match.group(2))
+        if divisor <= 0:
+            raise ValueError("Bad click value %r: divide by zero." % text)
+        value /= divisor
+    unit = match.group(3)
+    if value <= 0:
+        raise ValueError("A click must be greater than zero.")
+    if unit in ("mrad", "mil"):
+        mrad = value
+    elif unit == "moa":
+        mrad = value / _MOA_PER_MRAD
+    elif unit == "cm@100m":
+        mrad = value * 10.0 / 100.0          # 10 mm at 100 m = 0.1 mrad
+    else:                                    # mm@100m
+        mrad = value / 100.0
+    if not (0.001 <= mrad <= 100.0):
+        raise ValueError("A click of %g mrad is out of range." % mrad)
+    return mrad
+
+
+def sight_correction(stats: Any, distance_m: Optional[float] = None,
+                     click_mrad: Optional[float] = None) -> Dict[str, Any]:
+    """How to move the group onto the point of aim.
+
+    The group sits at ``(center_x_mm, center_y_mm)`` relative to the point of
+    aim, so the sight has to move it by the negative of that.  Angular values
+    need the distance; clicks additionally need the sight's click value.
+
+    Returns ``{}`` when the group is already centred closely enough to be noise.
+    """
+    dx_mm = -float(getattr(stats, "center_x_mm", 0.0) or 0.0)
+    dy_mm = -float(getattr(stats, "center_y_mm", 0.0) or 0.0)
+    out = {
+        "dx_mm": dx_mm, "dy_mm": dy_mm,
+        "horizontal": "left" if dx_mm < 0 else "right",
+        "vertical": "down" if dy_mm < 0 else "up",
+        "offset_mm": math.hypot(dx_mm, dy_mm),
+    }
+    for axis, mm in (("x", dx_mm), ("y", dy_mm)):
+        mrad = mm_to_mrad(abs(mm), distance_m)
+        out["mrad_" + axis] = mrad
+        out["moa_" + axis] = mrad_to_moa(mrad)
+        out["clicks_" + axis] = (
+            int(round(mrad / click_mrad)) if mrad and click_mrad else None)
+    return out
+
+
+def format_correction(corr: Dict[str, Any], distance_m: Optional[float] = None,
+                      dead_zone_mm: float = 1.0) -> str:
+    """One human sentence for :func:`sight_correction` (empty if centred)."""
+    if not corr or corr.get("offset_mm", 0.0) < dead_zone_mm:
+        return ""
+    parts = []
+    for axis in ("x", "y"):
+        mm = corr["d%s_mm" % axis]
+        if abs(mm) < dead_zone_mm / 2.0:
+            continue
+        way = corr["horizontal" if axis == "x" else "vertical"]
+        clicks = corr.get("clicks_" + axis)
+        if clicks:
+            parts.append("%d click%s %s" % (clicks, "" if clicks == 1 else "s", way))
+        elif corr.get("mrad_" + axis):
+            parts.append("%.2f mrad (%.1f MOA) %s"
+                         % (corr["mrad_" + axis], corr["moa_" + axis], way))
+        else:
+            parts.append("%.1f mm %s" % (abs(mm), way))
+    if not parts:
+        return ""
+    at = " at %g m" % distance_m if distance_m else ""
+    return "Move the group " + " and ".join(parts) + at
 
 
 # --------------------------------------------------------------------------- #

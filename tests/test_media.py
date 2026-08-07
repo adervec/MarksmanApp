@@ -190,3 +190,56 @@ class TestCleanupCli(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestPrintableFace(unittest.TestCase):
+    """A face is only useful if it prints at the size the app scores against."""
+
+    def setUp(self):
+        self.spec = get_target("Practice Face")
+
+    def test_page_is_declared_in_millimetres(self):
+        page = render.target_html(self.spec, distance_m=10.0, paper="a4")
+        # True scale depends entirely on mm units reaching the print engine.
+        self.assertIn("width='210.000mm'", page)
+        self.assertIn("viewBox='0 0 210.000 297.000'", page)
+        self.assertIn("@page{size:210.000mm 297.000mm;margin:0}", page)
+        self.assertIn("100 mm", page)              # the calibration ruler
+
+    def test_rings_come_out_at_their_real_radius(self):
+        page = render.target_html(self.spec, paper="a3")
+        for ring in self.spec.rings:
+            self.assertIn("r='%.3f'" % ring.radius_mm, page)
+
+    def test_big_faces_are_tiled_not_shrunk(self):
+        small = render.target_html(self.spec, paper="a3").count("class='sheet'")
+        big = render.target_html(self.spec, paper="a5").count("class='sheet'")
+        self.assertGreater(big, small)
+        self.assertIn("sheet 1 of", render.target_html(self.spec, paper="a5"))
+        # Whatever the paper, a millimetre stays a millimetre.
+        self.assertIn("r='250.000'", render.target_html(self.spec, paper="a5"))
+
+    def test_paper_sizes(self):
+        self.assertEqual(render.paper_size("A4"), (210.0, 297.0))
+        self.assertEqual(render.paper_size("200x250"), (200.0, 250.0))
+        self.assertEqual(render.paper_size(""), (210.0, 297.0))   # empty = a4
+        for bad in ("bogus", "10x10", "5000x5000", "200x"):
+            with self.assertRaises(KeyError, msg=bad):
+                render.paper_size(bad)
+
+    def test_a_pack_cannot_inject_markup_through_a_face_name(self):
+        spec = get_target("Practice Face")
+        spec = type(spec)(name="<script>alert(1)</script>", rings=spec.rings)
+        page = render.target_html(spec)
+        self.assertNotIn("<script>alert", page)
+        self.assertIn("&lt;script&gt;", page)
+
+    def test_refuses_to_emit_a_thousand_sheets(self):
+        spec = get_target("Practice Face")
+        huge = type(spec)(name="Huge", rings=spec.rings, face_width_mm=20000.0)
+        with self.assertRaises(ValueError):
+            render.target_html(huge, paper="a5")
+
+
+if __name__ == "__main__":
+    unittest.main()

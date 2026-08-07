@@ -12,12 +12,18 @@ coordinate data, which is never thrown away (see ``marksman cleanup``).
 
 Pure standard library: it draws straight into :class:`marksman.imageio.Image`
 and writes a PNG.
+
+The same module also emits :func:`target_html` -- a *printable* target face at
+true physical scale, so the rings you shoot at are the rings the app scores
+against.
 """
 
 from __future__ import annotations
 
 import math
 import os
+import re
+from html import escape
 from typing import List, Optional, Tuple
 
 from . import imageio
@@ -183,3 +189,205 @@ def save_recreation(session: Session, path: str,
         os.makedirs(directory, exist_ok=True)
     imageio.save_png(path, img)
     return path
+
+
+# --------------------------------------------------------------------------- #
+# Printable target faces
+#
+# The app scores against rings of an exact physical size, so you need a face
+# printed at exactly that size.  This emits SVG inside an HTML page rather than
+# a PNG: SVG in millimetre units prints at true scale in any browser, carries
+# text (ring numbers, the calibration ruler) without this project needing a
+# font, and hands the print dialog -- and "save as PDF" -- to the OS for free.
+#
+# ponytail: browser print instead of a PDF writer; add one if a headless
+# server ever needs to produce PDFs without a browser.
+# --------------------------------------------------------------------------- #
+
+PAPER_MM = {
+    "a3": (297.0, 420.0),
+    "a4": (210.0, 297.0),
+    "a5": (148.0, 210.0),
+    "letter": (215.9, 279.4),
+    "legal": (215.9, 355.6),
+    "tabloid": (279.4, 431.8),
+}
+
+_PAGE_MARGIN_MM = 8.0        # printer-safe edge
+_FOOTER_MM = 15.0            # reserved strip for the ruler and sheet label
+_MAX_SHEETS = 40             # a bad face must not emit a thousand pages
+
+
+def paper_size(name: str) -> Tuple[float, float]:
+    """Paper size in mm as ``(width, height)``.
+
+    Accepts a known name (``a4``, ``letter``, ...) or a custom ``WxH`` in mm.
+    """
+    key = str(name or "a4").strip().lower()
+    if key in PAPER_MM:
+        return PAPER_MM[key]
+    match = re.match(r"^(\d+(?:\.\d+)?)\s*[x*]\s*(\d+(?:\.\d+)?)$", key)
+    if not match:
+        raise KeyError("Unknown paper %r. Known: %s -- or a custom size like "
+                       "'200x250' (mm)."
+                       % (name, ", ".join(sorted(PAPER_MM))))
+    width, height = float(match.group(1)), float(match.group(2))
+    if not (40.0 <= width <= 2000.0 and 40.0 <= height <= 2000.0):
+        raise KeyError("Paper sides must be between 40 and 2000 mm.")
+    return (width, height)
+
+
+def _svg_rings(target: TargetSpec, cx: float, cy: float) -> List[str]:
+    """The face itself, drawn in millimetre coordinates."""
+    rings = sorted(target.rings, key=lambda r: r.radius_mm, reverse=True)
+    black_r = _black_radius_mm(target)
+    out = ["<circle cx='%.3f' cy='%.3f' r='%.3f' fill='#fff' stroke='#111' "
+           "stroke-width='0.35'/>" % (cx, cy, rings[0].radius_mm) if rings else ""]
+    if black_r > 0:
+        out.append("<circle cx='%.3f' cy='%.3f' r='%.3f' fill='#111'/>"
+                   % (cx, cy, black_r))
+    for i, ring in enumerate(rings):
+        on_black = ring.radius_mm <= black_r + 1e-6
+        out.append("<circle cx='%.3f' cy='%.3f' r='%.3f' fill='none' "
+                   "stroke='%s' stroke-width='0.35'/>"
+                   % (cx, cy, ring.radius_mm, "#fff" if on_black else "#111"))
+        # Ring value, on the horizontal centre line just inside its own edge.
+        inner = rings[i + 1].radius_mm if i + 1 < len(rings) else 0.0
+        band = ring.radius_mm - inner
+        if band < 3.0 or ring.radius_mm < 6.0:
+            continue                      # no room to read a number
+        size = min(band * 0.62, 6.0)
+        pos = ring.radius_mm - band / 2.0
+        fill = "#fff" if pos <= black_r else "#111"
+        for sign in (-1, 1):
+            out.append("<text x='%.3f' y='%.3f' font-size='%.2f' fill='%s' "
+                       "text-anchor='middle' dominant-baseline='central' "
+                       "font-family='Helvetica,Arial,sans-serif'>%d</text>"
+                       % (cx + sign * pos, cy, size, fill, ring.value))
+    # Aiming cross, hairline so it never hides a hit.
+    arm = max(2.0, min(6.0, target.outer_radius_mm * 0.06))
+    out.append("<path d='M%.3f %.3f h%.3f M%.3f %.3f v%.3f' stroke='#e33' "
+               "stroke-width='0.25' fill='none'/>"
+               % (cx - arm, cy, arm * 2, cx, cy - arm, arm * 2))
+    return [s for s in out if s]
+
+
+def _svg_footer(page_w: float, page_h: float, caption: str,
+                sheet: str) -> List[str]:
+    """Calibration ruler + labels, drawn in page coordinates."""
+    y = page_h - _FOOTER_MM + 6.0
+    usable = page_w - 2 * _PAGE_MARGIN_MM
+    # Leave room for the label beside it, or the instruction runs off the page.
+    length = 100.0 if usable >= 150.0 else 50.0
+    x0 = _PAGE_MARGIN_MM
+    out = ["<path d='M%.3f %.3f h%.3f' stroke='#111' stroke-width='0.3'/>"
+           % (x0, y, length)]
+    tick = 0.0
+    while tick <= length + 1e-6:                    # 10 mm ticks
+        high = tick in (0.0, length)
+        out.append("<path d='M%.3f %.3f v%.3f' stroke='#111' "
+                   "stroke-width='0.3'/>" % (x0 + tick, y, -3.5 if high else -2.0))
+        tick += 10.0
+    out.append("<text x='%.3f' y='%.3f' font-size='2.8' fill='#111' "
+               "font-family='Helvetica,Arial,sans-serif'>"
+               "%d mm -- if not, reprint at 100%%</text>"
+               % (x0 + length + 3.0, y, int(length)))
+    out.append("<text x='%.3f' y='%.3f' font-size='3.2' fill='#555' "
+               "font-family='Helvetica,Arial,sans-serif'>%s</text>"
+               % (x0, y + 5.5, escape(caption)))
+    out.append("<text x='%.3f' y='%.3f' font-size='3.2' fill='#555' "
+               "text-anchor='end' font-family='Helvetica,Arial,sans-serif'>"
+               "%s</text>" % (page_w - _PAGE_MARGIN_MM, y + 5.5, escape(sheet)))
+    return out
+
+
+def target_html(target: TargetSpec, distance_m: Optional[float] = None,
+                paper: str = "a4") -> str:
+    """A printable, true-scale page (or tiled pages) for ``target``.
+
+    Open it in a browser and print at 100% -- the ruler at the foot of every
+    sheet proves the scale came out right.  Faces too big for the paper are
+    split into sheets with alignment marks to tape together.
+    """
+    page_w, page_h = paper_size(paper)
+    extent = max(2.0 * target.outer_radius_mm,
+                 target.face_width_mm or 0.0) or 100.0
+    usable_w = page_w - 2 * _PAGE_MARGIN_MM
+    usable_h = page_h - 2 * _PAGE_MARGIN_MM - _FOOTER_MM
+    cols = max(1, int(math.ceil(extent / usable_w - 1e-9)))
+    rows = max(1, int(math.ceil(extent / usable_h - 1e-9)))
+    if cols * rows > _MAX_SHEETS:
+        raise ValueError(
+            "A %.0f mm face needs %d sheets of %s. Print it on bigger paper "
+            "(--paper a3) or pick a smaller face."
+            % (extent, cols * rows, paper))
+
+    # Centre the face inside the whole tiled area, then each sheet is just a
+    # shifted window onto the same drawing.
+    body = "".join(_svg_rings(target, cols * usable_w / 2.0,
+                              rows * usable_h / 2.0))
+    dist = (" at %g m" % distance_m) if distance_m else ""
+    caption = "%s -- %.0f mm face%s" % (target.name, extent, dist)
+
+    sheets = []
+    for row in range(rows):
+        for col in range(cols):
+            idx = row * cols + col + 1
+            label = ("sheet %d of %d (col %d, row %d)"
+                     % (idx, cols * rows, col + 1, row + 1)
+                     if cols * rows > 1 else "Marksman -- practice face, not "
+                     "an official target")
+            marks = ""
+            if cols * rows > 1:                      # corner alignment ticks
+                for mx in (_PAGE_MARGIN_MM, _PAGE_MARGIN_MM + usable_w):
+                    for my in (_PAGE_MARGIN_MM, _PAGE_MARGIN_MM + usable_h):
+                        marks += ("<path d='M%.3f %.3f h4 M%.3f %.3f v4' "
+                                  "stroke='#999' stroke-width='0.2'/>"
+                                  % (mx - 2, my, mx, my - 2))
+            sheets.append(
+                "<div class='sheet'><svg xmlns='http://www.w3.org/2000/svg' "
+                "width='%.3fmm' height='%.3fmm' viewBox='0 0 %.3f %.3f'>"
+                "<clipPath id='clip%d'><rect x='%.3f' y='%.3f' width='%.3f' "
+                "height='%.3f'/></clipPath>"
+                "<g clip-path='url(#clip%d)'><g transform='translate(%.3f,%.3f)'>"
+                "%s</g></g>%s%s</svg></div>"
+                % (page_w, page_h, page_w, page_h,
+                   idx, _PAGE_MARGIN_MM, _PAGE_MARGIN_MM, usable_w, usable_h,
+                   idx, _PAGE_MARGIN_MM - col * usable_w,
+                   _PAGE_MARGIN_MM - row * usable_h,
+                   body, marks,
+                   "".join(_svg_footer(page_w, page_h, caption, label))))
+
+    return _PRINT_PAGE % {
+        "title": escape(caption),
+        "w": "%.3f" % page_w,
+        "h": "%.3f" % page_h,
+        "sheets": "".join(sheets),
+        "note": escape(
+            "%d sheet%s. Print at 100%% (\"actual size\"), never \"fit to "
+            "page\", then check the ruler at the foot of each sheet."
+            % (cols * rows, "" if cols * rows == 1 else "s, taped together")),
+    }
+
+
+_PRINT_PAGE = """<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>%(title)s</title>
+<style>
+@page{size:%(w)smm %(h)smm;margin:0}
+html,body{margin:0;padding:0;background:#fff;color:#111;
+  font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+.sheet{width:%(w)smm;height:%(h)smm;overflow:hidden;page-break-after:always;break-after:page}
+.sheet:last-child{page-break-after:auto;break-after:auto}
+.bar{padding:12px 16px;background:#111;color:#fff;display:flex;gap:12px;
+  align-items:center;flex-wrap:wrap}
+.bar button{font:inherit;padding:8px 16px;border:0;border-radius:6px;
+  background:#e8a33d;color:#111;font-weight:600;cursor:pointer}
+@media screen{body{background:#555}.sheet{background:#fff;margin:12px auto;
+  box-shadow:0 2px 10px rgba(0,0,0,.5)}}
+@media print{.bar{display:none}}
+</style>
+<div class="bar"><button onclick="print()">Print</button>
+<span>%(title)s</span><span style="opacity:.7">%(note)s</span></div>
+%(sheets)s
+"""

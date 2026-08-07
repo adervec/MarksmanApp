@@ -8,7 +8,8 @@ A drills-and-progress tracker for hitting what you aim at — with **whatever yo
 shoot**. It **analyses a marked-up image of a target** (the groupings of your
 hits) into precise marksmanship metrics, judges them against **tiered practice
 standards**, and **tracks your progress over time** — overall, by tool
-**category**, and by **specific tool**. Desktop app, **phone-friendly web app**,
+**category**, and by **specific tool**. It also **prints the target faces** it
+scores against, at true physical size. Desktop app, **phone-friendly web app**,
 **Google Drive sync**, and a full CLI.
 
 The app is deliberately **equipment-agnostic**: it knows about *tools* that
@@ -46,7 +47,7 @@ installed:
 |---|---|
 | **Dashboard** | Stat cards (sessions, best group, tiers, streak, goals), **today's adaptive plan**, recent sessions, goals at a glance. |
 | **Drills** | The whole catalogue with your tier on each, plus how to run it, the cues, and the four standards. |
-| **Log a session** | The target face drawn to scale — **click your shots onto it** (right-click removes) and watch group size, mrad/MOA, mean radius, zero error and score update live. Or load a photo and let the vision layer find the hits. |
+| **Log a session** | The target face drawn to scale — **click your shots onto it** (right-click removes) and watch group size, mrad/MOA, mean radius, zero error, **which way to move your sight** and score update live. Or load a photo and let the vision layer find the hits. **Print face…** opens the face at true size. |
 | **Progress** | Line charts of any metric, scoped to overall / a tool / a category / a single drill, with the trend table beside it. |
 | **Sessions** | Every session; render a diagram or delete one. |
 | **Goals** | Set, track and remove your own targets. |
@@ -66,12 +67,19 @@ marksman web          # then open the printed URL on your phone
 
 <img src="assets/screenshot_phone.png" alt="The Marksman web app on a phone: tier points, today's plan and recent sessions" width="320">
 
-Five tabs: **Home** (tier points, today's plan, recent sessions, installed
-packs and their safety notes), **Drills** (the catalogue with your standings),
-**Log** (tap-to-place shots with live group stats, drill prefill, add-a-tool),
-**Sessions** and **Drive**. Served by the
-standard library's `http.server` — still zero dependencies, and it works in a
-desktop browser too.
+Five tabs: **Home** (tier points, today's plan, goals you can set and clear,
+recent sessions, installed packs and their safety notes), **Drills** (the
+catalogue with your standings), **Log** (tap-to-place shots with live group
+stats, sight-correction advice, a **Print at true size** button for the face,
+drill prefill, add-a-tool), **Sessions** (a **trend chart** per metric and per
+tool, delete a session, export CSV/JSON) and **Drive**. Served by the standard
+library's `http.server` — still zero dependencies, and it works in a desktop
+browser too.
+
+**Add it to your home screen** and it opens like an app — its own icon, no
+browser chrome. The access code stays the same between runs so the icon keeps
+working; `marksman web --new-key` issues a fresh one and invalidates the old
+links.
 
 The header's orientation toggle (**auto / portrait / landscape**) locks the
 layout by *setting*, not by how the phone happens to be tilted — handy when
@@ -104,9 +112,9 @@ origin. Access tokens live in memory and are never written to disk.
 > JavaScript origins* for that client, or paste your own client ID into the box
 > at the bottom of the Drive tab. The tab tells you what this page's origin is.
 
-The printed URL carries a one-run access code, so only someone with the full
-link can view or add sessions. It is meant for your home network — **don't
-port-forward it to the internet.**
+The printed URL carries an access code, so only someone with the full link can
+view or add sessions. It is meant for your home network — **don't port-forward
+it to the internet.**
 
 ## What it measures
 
@@ -123,6 +131,44 @@ From a set of hits it computes the standard measures used to judge a group:
 Group size is also reported as an **angle** (mrad / MOA) using the distance, and
 score as a **percentage of maximum**, so sessions at different distances and on
 different target faces can be compared on equal terms.
+
+### Which way to move the sight
+
+A zero error is only useful if you know what to do about it, so every analysis
+ends with the correction — *"move the group 12 mm left and 8 mm up"*, in mrad
+and MOA once it knows the distance. Give a tool the click value written on its
+turret and it counts the clicks for you:
+
+```bash
+marksman tool add --id r1 --name "Scoped rifle" --click 1/4moa    # or 0.1mrad
+marksman analyze --tool r1 --distance 10 --shots "12,8 14,10 13,6"
+#   Sight correction  : Move the group 18 clicks left and 11 clicks down at 10 m
+```
+
+It is arithmetic on your own group, not coaching: it assumes the sight moves the
+group the way its markings say, and it cannot know about hop-up, canted mounts
+or a bad rest. Tools without an adjustable sight simply leave `--click` off and
+get millimetres and angles.
+
+## Printing a target
+
+The rings are only worth measuring if the paper you shoot matches the face the
+app scores against, so Marksman prints its own — at **true physical size**:
+
+```bash
+marksman targets --print "Airsoft Practice 10m" --distance 10   # opens a browser
+marksman targets --print "Practice Face" --paper a3 -o face.html --no-open
+```
+
+It writes a page of SVG in millimetre units and hands it to your browser's print
+dialog, which is also how you get a PDF. Faces bigger than the paper are **split
+across sheets** with alignment marks to tape together (`--paper` takes `a4`,
+`letter`, `a3`, `a5`, `legal`, `tabloid`, or a custom `WxH` in mm).
+
+Every sheet carries a **100 mm ruler**: measure it after printing. If it isn't
+100 mm, your printer scaled the page — print again at 100% / "actual size", not
+"fit to page". The same button is on the desktop app's Log tab and the phone
+app's Log tab.
 
 ## Install
 
@@ -181,6 +227,9 @@ python -m marksman.cli progress --by-tool
 python -m marksman.cli progress --tool b1 --sessions
 python -m marksman.cli sessions                 # list every saved target
 python -m marksman.cli targets                  # built-in target faces
+
+# 3b) Print the face you are shooting at, at true size
+python -m marksman.cli targets --print "Airsoft Practice 10m" --distance 10
 
 # 4) Pick a skin (see "Skins" below)
 python -m marksman.cli theme                    # list skins
@@ -469,6 +518,10 @@ equipment pack. They are generic concentric bullseyes with reasonable ring sizes
 for their discipline — for personal progress tracking, not an official standard.
 Print whatever face you like and register a custom one with
 `targets.uniform_target` + `targets.register`, or put it in a pack.
+
+Printed faces are true-scale **only if your printer prints them true-scale**.
+The app cannot check that, which is why every sheet has a ruler on it — measure
+it before you trust a measurement taken against it.
 
 ## License
 

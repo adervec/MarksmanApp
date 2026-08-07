@@ -28,6 +28,7 @@ import os
 import textwrap
 import sys
 import uuid
+import webbrowser
 from typing import List, Optional, Tuple
 
 from .models import Shot, Tool, Session, TargetSpec
@@ -117,6 +118,13 @@ def _make_painter(args: argparse.Namespace, db: Database,
 def cmd_tool_add(args: argparse.Namespace) -> int:
     db = Database.load(args.db)
     wid = args.id or uuid.uuid4().hex[:8]
+    click_mrad = None
+    if getattr(args, "click", None):
+        try:
+            click_mrad = tracker.parse_click(args.click)
+        except ValueError as e:
+            print("error: %s" % e)
+            return 2
     tool = Tool(
         id=wid,
         name=args.name,
@@ -124,6 +132,7 @@ def cmd_tool_add(args: argparse.Namespace) -> int:
         projectile=args.projectile or "",
         is_powered=args.is_powered,
         projectile_mm=args.projectile_mm,
+        sight_click_mrad=click_mrad,
         notes=args.notes or "",
     )
     db.add_tool(tool)
@@ -151,6 +160,8 @@ def cmd_tool_list(args: argparse.Namespace) -> int:
 def cmd_targets(args: argparse.Namespace) -> int:
     db = Database.load(args.db)
     p = _make_painter(args, db)
+    if getattr(args, "print_face", None):
+        return _print_face(args, db, p)
     names = set(targets_mod.list_targets()) | set(t.name for t in db.custom_targets.values())
     print(p.title("Available targets:"))
     for name in sorted(names):
@@ -163,6 +174,37 @@ def cmd_targets(args: argparse.Namespace) -> int:
               + p.muted("10-ring ") + p.value("%.1f" % (spec.ten_ring_radius_mm * 2))
               + p.muted(" mm, outer ") + p.value("%.0f" % (spec.outer_radius_mm * 2))
               + p.muted(" mm, max ") + p.value("%d" % spec.max_value))
+    return 0
+
+
+def _slug(name: str) -> str:
+    out = "".join(c.lower() if c.isalnum() else "-" for c in name)
+    while "--" in out:
+        out = out.replace("--", "-")
+    return out.strip("-") or "target"
+
+
+def _print_face(args: argparse.Namespace, db: Database, p: Painter) -> int:
+    """Write a true-scale printable face and (by default) open it."""
+    try:
+        spec = resolve_target(args.print_face, db)
+        page = render_mod.target_html(spec, distance_m=args.distance,
+                                      paper=args.paper)
+    except (KeyError, ValueError) as e:
+        print(p.bad("error: %s" % e))
+        return 2
+    path = os.path.abspath(args.out or ("%s.html" % _slug(spec.name)))
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(page)
+    sheets = page.count("class='sheet'")
+    print(p.good("Printable face written: ") + p.value(path))
+    print(p.muted("  %s, %.0f mm across, %d sheet%s of %s"
+                  % (spec.name, spec.outer_radius_mm * 2, sheets,
+                     "" if sheets == 1 else "s", args.paper)))
+    print(p.muted("  Print at 100% ('actual size'), then check the ruler on "
+                  "each sheet measures what it says."))
+    if not args.no_open:
+        webbrowser.open("file:///" + path.replace("\\", "/"))
     return 0
 
 
@@ -275,7 +317,8 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     print(p.muted(detection_note))
     print()
     print(report.format_group_stats(stats, session.target_name, args.distance,
-                                    painter=p))
+                                    painter=p,
+                                    click_mrad=tool.sight_click_mrad))
 
     if not args.no_save:
         db.add_session(session)
@@ -964,6 +1007,12 @@ def cmd_gui(args: argparse.Namespace) -> int:
 
 def cmd_web(args: argparse.Namespace) -> int:
     from . import web as web_mod
+    if args.new_key:
+        db = Database.load(args.db)
+        db.settings.pop("web_key", None)
+        db.save()
+        print("Access key rotated -- old links, bookmarks and installed icons "
+              "will stop working.")
     return web_mod.serve(args.db, host=args.host, port=args.port)
 
 
@@ -1211,6 +1260,10 @@ def build_parser() -> argparse.ArgumentParser:
                     help="projectile diameter in mm (improves scoring)")
     wa.add_argument("--powered", action="store_true", dest="is_powered",
                     help="gas / battery / air driven rather than manual")
+    wa.add_argument("--click", dest="click",
+                    help="one click of this tool's sight, as written on the "
+                         "turret: '0.1mrad', '1/4moa', '0.25moa'. Turns a zero "
+                         "error into clicks to dial.")
     wa.add_argument("--notes", default="")
     wa.set_defaults(func=cmd_tool_add)
     wl = wsub.add_parser("list", help="list tools")
@@ -1218,6 +1271,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     # targets
     tp = sub.add_parser("targets", help="list known target faces")
+    tp.add_argument("--print", dest="print_face", metavar="FACE",
+                    help="write a true-scale printable page for FACE and open "
+                         "it in your browser")
+    tp.add_argument("--paper", default="a4",
+                    help="paper for --print: a4, letter, a3, a5, legal, "
+                         "tabloid, or a custom 'WxH' in mm (default: a4)")
+    tp.add_argument("--distance", type=float,
+                    help="note this distance on the printed sheet")
+    tp.add_argument("-o", "--out", help="write the page here (default: "
+                                        "<face-name>.html in this folder)")
+    tp.add_argument("--no-open", action="store_true",
+                    help="just write the file, do not open a browser")
     tp.set_defaults(func=cmd_targets)
 
     # analyze
@@ -1362,6 +1427,8 @@ def build_parser() -> argparse.ArgumentParser:
     wb.add_argument("--host", default="", help="bind address (default: all "
                                                "interfaces)")
     wb.add_argument("--port", type=int, default=8317, help="port (default 8317)")
+    wb.add_argument("--new-key", action="store_true", dest="new_key",
+                    help="issue a fresh access key (invalidates existing links)")
     wb.set_defaults(func=cmd_web)
 
     # logo (generate the app icon)
