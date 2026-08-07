@@ -742,7 +742,8 @@ nav button{font-size:13px}
 <div id="rot">
 <div id="scroll">
 <header><b>MARKSMAN</b><span class="hright">
-  <button id="orient" title="lock the layout portrait or landscape">auto</button>
+  <button id="orient" aria-label="Screen orientation"
+    title="lock the layout portrait or landscape">auto</button>
   <span id="points" class="muted"></span></span></header>
 <main>
 
@@ -767,17 +768,17 @@ nav button{font-size:13px}
 <section id="log">
   <div class="card">
     <div class="row"><div>
-      <label>Tool</label><select id="tool"></select></div>
-      <button class="ghost small" id="addTool" title="add a tool">+</button>
+      <label for="tool">Tool</label><select id="tool"></select></div>
+      <button class="ghost small" id="addTool" title="add a tool" aria-label="Add a tool">+</button>
     </div>
-    <label>Drill (optional)</label><select id="drill"></select>
+    <label for="drill">Drill (optional)</label><select id="drill"></select>
     <div id="dhint" class="muted"></div>
     <div class="row">
-      <div><label>Target face</label><select id="target"></select></div>
-      <div><label>Distance m</label><input id="dist" type="number" inputmode="decimal" min="1" max="1000"></div>
+      <div><label for="target">Target face</label><select id="target"></select></div>
+      <div><label for="dist">Distance m</label><input id="dist" type="number" inputmode="decimal" min="1" max="1000"></div>
     </div>
     <div class="row">
-      <div><label>Print the face</label>
+      <div><label for="paper">Print the face</label>
         <select id="paper"><option value="a4">A4</option>
           <option value="letter">Letter</option><option value="a3">A3</option>
           <option value="a5">A5</option></select></div>
@@ -785,10 +786,10 @@ nav button{font-size:13px}
          style="align-self:end;text-align:center;text-decoration:none;padding:10px 12px"
          >Print at true size</a>
     </div>
-    <label>Date</label><input id="date" type="date">
+    <label for="date">Date</label><input id="date" type="date">
   </div>
   <div class="card">
-    <canvas id="cv" height="420"></canvas>
+    <canvas id="cv" height="420" role="img" aria-label="Target face. Tap to place a shot, or type coordinates below."></canvas>
     <p id="stats" class="muted" style="text-align:center;margin:8px 0;white-space:pre-line">Tap the target to place shots.</p>
     <div class="row">
       <button class="ghost" id="undo">Undo</button>
@@ -796,7 +797,15 @@ nav button{font-size:13px}
     </div>
   </div>
   <div class="card">
-    <label>Notes</label><textarea id="notes" rows="2"></textarea>
+    <div class="row">
+      <div><label for="sx">Shot x (mm)</label>
+        <input id="sx" type="number" inputmode="decimal" step="0.1"></div>
+      <div><label for="sy">Shot y (mm)</label>
+        <input id="sy" type="number" inputmode="decimal" step="0.1"></div>
+    </div>
+    <button class="ghost small" id="addShot" style="width:100%;margin-bottom:10px"
+      >Add that shot</button>
+    <label for="notes">Notes</label><textarea id="notes" rows="2"></textarea>
     <div style="height:10px"></div>
     <button class="btn" id="save">Save session</button>
   </div>
@@ -805,14 +814,14 @@ nav button{font-size:13px}
 <section id="sessions">
   <div class="card">
     <div class="row">
-      <div><label>Trend</label><select id="metric">
+      <div><label for="metric">Trend</label><select id="metric">
         <option value="group_mm">Group size (mm)</option>
         <option value="group_mrad">Group size (mrad)</option>
         <option value="mean_radius_mm">Mean radius (mm)</option>
         <option value="zero_mm">Zero error (mm)</option>
         <option value="score_pct">Score (%)</option>
       </select></div>
-      <div><label>Tool</label><select id="chartTool"></select></div>
+      <div><label for="chartTool">Tool</label><select id="chartTool"></select></div>
     </div>
     <div id="chart"></div>
     <div id="chartSub" class="muted" style="text-align:center"></div>
@@ -845,11 +854,11 @@ nav button{font-size:13px}
     <input type="text" id="dFolder" placeholder="paste the Drive folder link">
     <div style="height:8px"></div>
     <div class="row">
-      <div><label>Marked with</label><select id="dMode">
+      <div><label for="dMode">Marked with</label><select id="dMode">
         <option value="marker">Red marker dots</option>
         <option value="holes">Dark holes in paper</option>
       </select></div>
-      <div><label>Face</label><select id="dTarget"></select></div>
+      <div><label for="dTarget">Face</label><select id="dTarget"></select></div>
     </div>
     <div style="height:10px"></div>
     <button class="btn" id="dScan">Scan folder</button>
@@ -941,6 +950,7 @@ function sessLine(box, s, canDelete){
     const btns = el("div", "rowbtns");
     const del = el("button", "x", "×");
     del.title = "delete this session";
+    del.setAttribute("aria-label", "Delete the session from " + s.date);
     del.onclick = async () => {
       if (!confirm("Delete the session from " + s.date + "? This cannot be undone.")) return;
       try { await api("/api/session/delete", {id: s.id}); await load(); toast("Deleted"); }
@@ -986,6 +996,7 @@ function renderHome(){
                        x.met == null ? "no data" : (x.met ? "met ✓" : "best " + fmt(x.best))));
     const del = el("button", "x", "×");
     del.title = "remove this goal";
+    del.setAttribute("aria-label", "Remove the " + x.metric + " goal");
     del.onclick = async () => {
       try { await api("/api/goal", {action: "rm", id: x.id}); await load(); }
       catch (e) { toast(e.message); }
@@ -1217,7 +1228,8 @@ async function refreshShots(){
     lastStats = await api("/api/stats", {shots: shots, target: $("target").value,
                                          distance_m: $("dist").value || null,
                                          tool_id: $("tool").value || ""});
-    let t = lastStats.n + " shots · group " + fmt(lastStats.group_mm) + " mm";
+    let t = lastStats.n + (lastStats.n === 1 ? " shot" : " shots")
+            + " · group " + fmt(lastStats.group_mm) + " mm";
     if (lastStats.group_mrad != null) t += " (" + fmt(lastStats.group_mrad, 2) + " mrad)";
     t += " · mean r " + fmt(lastStats.mean_radius_mm) + " · zero off " + fmt(lastStats.zero_mm) + " mm";
     if (lastStats.score_pct != null) t += " · " + fmt(lastStats.score_pct, 0) + "%";
@@ -1264,6 +1276,15 @@ $("addGoal").onclick = async () => {
   } catch (e) { toast(e.message); }
 };
 
+// Typed entry: the keyboard route onto the target, and exact coordinates
+// when you already have them (from a scan, or measured off the paper).
+$("addShot").onclick = () => {
+  const x = parseFloat($("sx").value), y = parseFloat($("sy").value);
+  if (!isFinite(x) || !isFinite(y)){ toast("Enter both x and y in mm."); return; }
+  shots.push({x_mm: +x.toFixed(1), y_mm: +y.toFixed(1)});
+  $("sx").value = ""; $("sy").value = ""; $("sx").focus();
+  refreshShots();
+};
 $("undo").onclick = () => { shots.pop(); refreshShots(); };
 $("clear").onclick = () => { shots = []; refreshShots(); };
 $("drill").onchange = () => applyDrill($("drill").value);

@@ -316,6 +316,22 @@ class TestWebExtras(TestWeb):
             "shots": [{"x_mm": 12, "y_mm": 8}], "distance_m": 10})
         self.assertIn("MOA", plain["correction"])
 
+    def test_the_page_is_usable_without_a_pointer(self):
+        _, raw = self._call("/")
+        page = raw.decode("utf-8")
+        # Every control names itself, or a screen reader announces nothing.
+        import re
+        labels = re.findall(r"<label[^>]*>", page)
+        self.assertTrue(labels)
+        self.assertLessEqual(sum("for=" not in x for x in labels), 1)
+        ids = set(re.findall(r'id="([^"]+)"', page))
+        for target in re.findall(r'<label for="([^"]+)"', page):
+            self.assertIn(target, ids)
+        self.assertIn('aria-label="Add a tool"', page)
+        # Shots can be typed, not only tapped onto the canvas.
+        self.assertIn('id="addShot"', page)
+        self.assertIn('id="sx"', page)
+
     def test_access_key_survives_a_restart_but_never_syncs(self):
         # A key that changed every run would break the phone's home-screen icon.
         srv = web.make_server(self.path, "127.0.0.1", 0)

@@ -69,9 +69,10 @@ marksman web          # then open the printed URL on your phone
 
 Five tabs: **Home** (tier points, today's plan, goals you can set and clear,
 recent sessions, installed packs and their safety notes), **Drills** (the
-catalogue with your standings), **Log** (tap-to-place shots with live group
-stats, sight-correction advice, a **Print at true size** button for the face,
-drill prefill, add-a-tool), **Sessions** (a **trend chart** per metric and per
+catalogue with your standings), **Log** (tap-to-place shots -- or type the
+coordinates, which is also the keyboard route -- with live group stats,
+sight-correction advice, a **Print at true size** button for the face, drill
+prefill, add-a-tool), **Sessions** (a **trend chart** per metric and per
 tool, delete a session, export CSV/JSON) and **Drive**. Served by the standard
 library's `http.server` — still zero dependencies, and it works in a desktop
 browser too.
