@@ -370,6 +370,32 @@ def target_html(target: TargetSpec, distance_m: Optional[float] = None,
     }
 
 
+def sheet_html(caption: str, body: str, paper: str = "a4") -> str:
+    """One printable sheet of arbitrary SVG drawn in millimetre units.
+
+    ``body``'s origin is the top-left of the printable area -- inside the page
+    margins and above the footer strip.  Used by :mod:`marksman.sheets` for
+    the drill-sheet catalogue; the ruler and print CSS come along for free.
+    """
+    page_w, page_h = paper_size(paper)
+    sheet = ("<div class='sheet'><svg xmlns='http://www.w3.org/2000/svg' "
+             "width='%.3fmm' height='%.3fmm' viewBox='0 0 %.3f %.3f'>"
+             "<g transform='translate(%.3f,%.3f)'>%s</g>%s</svg></div>"
+             % (page_w, page_h, page_w, page_h,
+                _PAGE_MARGIN_MM, _PAGE_MARGIN_MM, body,
+                "".join(_svg_footer(page_w, page_h, caption,
+                                    "Marksman -- practice sheet, not an "
+                                    "official target"))))
+    return _PRINT_PAGE % {
+        "title": escape(caption),
+        "w": "%.3f" % page_w,
+        "h": "%.3f" % page_h,
+        "sheets": sheet,
+        "note": escape('Print at 100% ("actual size"), never "fit to page", '
+                       "then check the ruler at the foot of the sheet."),
+    }
+
+
 _PRINT_PAGE = """<!doctype html>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>%(title)s</title>

@@ -20,6 +20,23 @@ class TestCliFlow(unittest.TestCase):
             code = main(["--db", self.db] + list(args))
         return code, buf.getvalue()
 
+    def test_print_falls_through_to_the_sheet_catalogue(self):
+        out_file = os.path.join(self.dir, "sheet.html")
+        code, out = self.run_cli("targets", "--print", "dots-15",
+                                 "-o", out_file, "--no-open")
+        self.assertEqual(code, 0)
+        with open(out_file, encoding="utf-8") as fh:
+            self.assertIn("width='210.000mm'", fh.read())
+        code, out = self.run_cli("targets", "--print", "nonsense-99",
+                                 "--no-open")
+        self.assertEqual(code, 2)
+        self.assertIn("Families", out)
+        # The bare listing now advertises the sheet families too.
+        code, out = self.run_cli("targets")
+        self.assertEqual(code, 0)
+        self.assertIn("drill sheets", out)
+        self.assertIn("bulls-40", out)
+
     def test_parse_shots(self):
         shots = parse_shots("0,0 1.5,-2; 3,4")
         self.assertEqual(len(shots), 3)

@@ -279,6 +279,20 @@ class TestWebExtras(TestWeb):
                     "?face=Practice%20Face&distance=99999"):
             self.assertEqual(self._call("/target.html" + bad)[0], 400, bad)
 
+    def test_printable_drill_sheets(self):
+        # Every catalogue entry the state advertises actually prints.
+        designs = self._json("/api/state")[1]["sheets"]
+        self.assertGreaterEqual(len(designs), 10)
+        for name, _blurb in designs:
+            status, raw = self._call("/target.html?design=%s" % name)
+            self.assertEqual(status, 200, name)
+            self.assertIn(b"210.000mm", raw, name)
+        # Parametric sizes work; junk and misfits are refused, not crashed.
+        self.assertEqual(self._call("/target.html?design=dots-8.5")[0], 200)
+        for bad in ("?design=silhouette", "?design=dots-0",
+                    "?design=clock-50&paper=a5", "?design=face-5000"):
+            self.assertEqual(self._call("/target.html" + bad)[0], 400, bad)
+
     def test_export_downloads(self):
         status, raw = self._call("/export.csv")
         self.assertEqual(status, 200)

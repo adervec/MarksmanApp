@@ -38,6 +38,7 @@ from . import goals as goals_mod
 from . import logo as logo_mod
 from . import packs as packs_mod
 from . import render as render_mod
+from . import sheets as sheets_mod
 from . import targets as targets_mod
 from . import tracker
 from .goals import METRICS
@@ -189,6 +190,7 @@ def _state(db: Database) -> Dict[str, Any]:
         "sessions": [_sess_row(db, s) for s in sessions[:50]],
         "categories": packs_mod.categories(db),
         "goalMetrics": sorted(METRICS),
+        "sheets": sheets_mod.catalog(),
         "packs": pack_rows,
         "terms": {w: packs_mod.term(w, db) for w in ("tool", "tools",
                                                      "projectile", "projectiles")},
@@ -379,17 +381,26 @@ def _sync(server: ThreadingHTTPServer, body: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _printable(db: Database, query: Dict[str, List[str]]) -> bytes:
-    """A true-scale printable target face, ready for the browser's print dialog."""
-    spec = _target(db, (query.get("face") or [""])[0])
-    raw = (query.get("distance") or [""])[0]
+    """A true-scale printable target, ready for the browser's print dialog.
+
+    ``?face=`` prints a scoring face; ``?design=`` prints a sheet from the
+    parametric catalogue ('dots-15', 'bulls-40', ...) instead.
+    """
+    paper = (query.get("paper") or ["a4"])[0]
+    design = (query.get("design") or [""])[0]
     try:
-        distance = float(raw) if raw else None
-        if distance is not None and not (0 < distance <= 1000):
-            raise ValueError("distance out of range")
-        page = render_mod.target_html(spec, distance_m=distance,
-                                      paper=(query.get("paper") or ["a4"])[0])
+        if design:
+            page = sheets_mod.make(design, paper=paper)
+        else:
+            spec = _target(db, (query.get("face") or [""])[0])
+            raw = (query.get("distance") or [""])[0]
+            distance = float(raw) if raw else None
+            if distance is not None and not (0 < distance <= 1000):
+                raise ValueError("distance out of range")
+            page = render_mod.target_html(spec, distance_m=distance,
+                                          paper=paper)
     except (KeyError, ValueError) as e:
-        raise _Bad(str(e))
+        raise _Bad(str(e.args[0] if e.args else e))
     return page.encode("utf-8")
 
 
@@ -778,14 +789,15 @@ nav button{font-size:13px}
       <div><label for="dist">Distance m</label><input id="dist" type="number" inputmode="decimal" min="1" max="1000"></div>
     </div>
     <div class="row">
-      <div><label for="paper">Print the face</label>
+      <div><label for="design">Print</label><select id="design"></select></div>
+      <div><label for="paper">Paper</label>
         <select id="paper"><option value="a4">A4</option>
           <option value="letter">Letter</option><option value="a3">A3</option>
           <option value="a5">A5</option></select></div>
-      <a class="btn ghost small" id="printFace" target="_blank" rel="noopener"
-         style="align-self:end;text-align:center;text-decoration:none;padding:10px 12px"
-         >Print at true size</a>
     </div>
+    <a class="btn ghost small" id="printFace" target="_blank" rel="noopener"
+       style="display:block;text-align:center;text-decoration:none;padding:10px 12px;margin-bottom:10px"
+       >Print at true size</a>
     <label for="date">Date</label><input id="date" type="date">
   </div>
   <div class="card">
@@ -1153,6 +1165,10 @@ function renderLogControls(){
   const opts = [{id:"", name:"— free session —"}].concat(S.drills);
   fillSelect($("drill"), opts, d => d.id, d => d.name);
   fillSelect($("target"), S.targets, t => t.name, t => t.name);
+  const keepDesign = $("design").value;
+  fillSelect($("design"), [["", "This target face"]].concat(S.sheets),
+             r => r[0], r => r[0] ? r[0] + " — " + r[1].split(";")[0] : r[1]);
+  if (keepDesign) $("design").value = keepDesign;
   if (!$("date").value) $("date").value = new Date().toLocaleDateString("en-CA");
   curTarget = S.targets.find(t => t.name === $("target").value) || S.targets[0];
 }
@@ -1254,12 +1270,15 @@ $("cv").addEventListener("pointerdown", e => {
   refreshShots();
 });
 function updatePrintLink(){
-  const q = "face=" + encodeURIComponent($("target").value)
-          + "&paper=" + encodeURIComponent($("paper").value)
-          + ($("dist").value ? "&distance=" + encodeURIComponent($("dist").value) : "");
+  const d = $("design").value;   // "" = the face being shot at
+  const q = (d ? "design=" + encodeURIComponent(d)
+               : "face=" + encodeURIComponent($("target").value)
+                 + ($("dist").value ? "&distance=" + encodeURIComponent($("dist").value) : ""))
+          + "&paper=" + encodeURIComponent($("paper").value);
   $("printFace").href = "/target.html?" + q;
 }
 $("paper").onchange = updatePrintLink;
+$("design").onchange = updatePrintLink;
 
 $("addGoal").onclick = async () => {
   const metric = prompt("Goal metric — one of: " + S.goalMetrics.join(", "), "group_size");

@@ -71,8 +71,8 @@ Five tabs: **Home** (tier points, today's plan, goals you can set and clear,
 recent sessions, installed packs and their safety notes), **Drills** (the
 catalogue with your standings), **Log** (tap-to-place shots -- or type the
 coordinates, which is also the keyboard route -- with live group stats,
-sight-correction advice, a **Print at true size** button for the face, drill
-prefill, add-a-tool), **Sessions** (a **trend chart** per metric and per
+sight-correction advice, a **Print at true size** button for the face or any
+drill sheet from the catalogue, drill prefill, add-a-tool), **Sessions** (a **trend chart** per metric and per
 tool, delete a session, export CSV/JSON) and **Drive**. Served by the standard
 library's `http.server` — still zero dependencies, and it works in a desktop
 browser too.
@@ -171,6 +171,27 @@ Every sheet carries a **100 mm ruler**: measure it after printing. If it isn't
 100 mm, your printer scaled the page — print again at 100% / "actual size", not
 "fit to page". The same button is on the desktop app's Log tab and the phone
 app's Log tab.
+
+### The drill-sheet catalogue
+
+Beyond the scoring faces there is a **parametric catalogue** of practice
+sheets — a family name plus a size in millimetres, any size, any paper, so the
+selection is effectively unlimited:
+
+```bash
+marksman targets                       # lists the families under the faces
+marksman targets --print dots-15       # rows of 15 mm aiming dots
+marksman targets --print bulls-40      # a grid of 40 mm bulls
+marksman targets --print grid-10       # sight-in graph paper, 10 mm squares
+marksman targets --print clock-25      # twelve bulls in a circle, call and hit
+marksman targets --print ladder-50     # shrinking bulls, big to small
+marksman targets --print face-120      # a real scored bullseye at 120 mm
+marksman targets --print face-600 --paper a3   # tiled across sheets
+```
+
+Ten families — `face`, `bulls`, `dots`, `squares`, `diamonds`, `grid`,
+`clock`, `ladder`, `lines`, `cards` — each at whatever size fits your paper.
+The phone app's Log tab has the same catalogue in its **Print** dropdown.
 
 ## Install
 

@@ -1,6 +1,6 @@
 [project]
 name = "marksman"
-version = "0.6.0"
+version = "0.7.0"
 description = "Marksmanship drills and progress tracking for any launcher -- airsoft, foam darts, or whatever you install a pack for: tiered drills, target-image analysis, charts, desktop GUI, phone web app and Google Drive sync. All standard library."
 readme = "README.md"
 requires-python = ">=3.9"

@@ -39,6 +39,7 @@ from .storage import Database, DEFAULT_DB_PATH
 from . import tracker
 from . import report
 from . import render as render_mod
+from . import sheets as sheets_mod
 from . import theme as theme_mod
 from . import coach as coach_mod
 from . import exporter
@@ -211,6 +212,12 @@ def cmd_targets(args: argparse.Namespace) -> int:
               + p.muted("10-ring ") + p.value("%.1f" % (spec.ten_ring_radius_mm * 2))
               + p.muted(" mm, outer ") + p.value("%.0f" % (spec.outer_radius_mm * 2))
               + p.muted(" mm, max ") + p.value("%d" % spec.max_value))
+    print()
+    print(p.title("Printable drill sheets (any family at any size in mm):"))
+    for name, blurb in sheets_mod.catalog():
+        print("  " + p.label("%-14s" % name) + p.muted(blurb))
+    print(p.muted("Print any of it: marksman targets --print dots-15 "
+                  "[--paper a3]"))
     return 0
 
 
@@ -222,22 +229,32 @@ def _slug(name: str) -> str:
 
 
 def _print_face(args: argparse.Namespace, db: Database, p: Painter) -> int:
-    """Write a true-scale printable face and (by default) open it."""
+    """Write a true-scale printable face or drill sheet, and (by default)
+    open it.  A name is tried as a scoring face first, then as a design from
+    the parametric sheet catalogue ('dots-15', 'bulls-40', 'face-120', ...)."""
+    name = args.print_face
     try:
-        spec = resolve_target(args.print_face, db)
-        page = render_mod.target_html(spec, distance_m=args.distance,
-                                      paper=args.paper)
+        try:
+            spec = resolve_target(name, db)
+            page = render_mod.target_html(spec, distance_m=args.distance,
+                                          paper=args.paper)
+            what = "%s, %.0f mm across" % (spec.name, spec.outer_radius_mm * 2)
+        except KeyError:
+            page = sheets_mod.make(name, paper=args.paper)
+            what = name
+            spec = None
     except (KeyError, ValueError) as e:
-        print(p.bad("error: %s" % e))
+        print(p.bad("error: %s" % (e.args[0] if e.args else e)))
+        print(p.muted("  'marksman targets' lists every face and sheet design."))
         return 2
-    path = os.path.abspath(args.out or ("%s.html" % _slug(spec.name)))
+    path = os.path.abspath(args.out or
+                           ("%s.html" % _slug(spec.name if spec else name)))
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(page)
     sheets = page.count("class='sheet'")
-    print(p.good("Printable face written: ") + p.value(path))
-    print(p.muted("  %s, %.0f mm across, %d sheet%s of %s"
-                  % (spec.name, spec.outer_radius_mm * 2, sheets,
-                     "" if sheets == 1 else "s", args.paper)))
+    print(p.good("Printable target written: ") + p.value(path))
+    print(p.muted("  %s, %d sheet%s of %s"
+                  % (what, sheets, "" if sheets == 1 else "s", args.paper)))
     print(p.muted("  Print at 100% ('actual size'), then check the ruler on "
                   "each sheet measures what it says."))
     if not args.no_open:
@@ -1388,10 +1405,12 @@ def build_parser() -> argparse.ArgumentParser:
     wl.set_defaults(func=cmd_tool_list)
 
     # targets
-    tp = sub.add_parser("targets", help="list known target faces")
+    tp = sub.add_parser("targets",
+                        help="list target faces and printable drill sheets")
     tp.add_argument("--print", dest="print_face", metavar="FACE",
-                    help="write a true-scale printable page for FACE and open "
-                         "it in your browser")
+                    help="write a true-scale printable page and open it: a "
+                         "face by name, or a drill sheet like 'dots-15', "
+                         "'bulls-40', 'grid-10', 'face-120'")
     tp.add_argument("--paper", default="a4",
                     help="paper for --print: a4, letter, a3, a5, legal, "
                          "tabloid, or a custom 'WxH' in mm (default: a4)")
