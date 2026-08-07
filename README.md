@@ -141,6 +141,7 @@ turret and it counts the clicks for you:
 
 ```bash
 marksman tool add --id r1 --name "Scoped rifle" --click 1/4moa    # or 0.1mrad
+marksman tool set --id r1 --click 0.1mrad     # change it later; '' clears it
 marksman analyze --tool r1 --distance 10 --shots "12,8 14,10 13,6"
 #   Sight correction  : Move the group 18 clicks left and 11 clicks down at 10 m
 ```
@@ -405,6 +406,19 @@ toward what you're chasing.
 marksman export --format csv --out sessions.csv   # one row per session
 marksman export --format json                     # to stdout (pipe it)
 ```
+
+Both are **reports** — one flattened row per session, for a spreadsheet. The
+backup is the database file itself (`marksman_data.json`): copy it wherever you
+like. To put one back, or to fold a second machine's history into this one:
+
+```bash
+marksman import ~/backups/marksman_data.json --dry-run   # what would be added
+marksman import ~/backups/marksman_data.json
+```
+
+It merges by id and never overwrites what you already have, so running it twice
+does nothing the second time. It also accepts the bundle the Drive tab syncs,
+which is how you restore from Drive without a browser.
 
 ## Logo / icon
 

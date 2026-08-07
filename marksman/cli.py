@@ -24,6 +24,7 @@ Examples
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import textwrap
 import sys
@@ -31,7 +32,7 @@ import uuid
 import webbrowser
 from typing import List, Optional, Tuple
 
-from .models import Shot, Tool, Session, TargetSpec
+from .models import Shot, Tool, Session, TargetSpec, normalize_category
 from .grouping import analyze_group
 from . import targets as targets_mod
 from .storage import Database, DEFAULT_DB_PATH
@@ -138,6 +139,42 @@ def cmd_tool_add(args: argparse.Namespace) -> int:
     db.add_tool(tool)
     db.save()
     print("Added tool %s: %s [%s]" % (tool.id, tool.name, tool.category))
+    return 0
+
+
+def cmd_tool_set(args: argparse.Namespace) -> int:
+    """Change one field of an existing tool; leave the rest alone."""
+    db = Database.load(args.db)
+    tool = db.find_tool(args.id)
+    if tool is None:
+        print("error: no tool matching %r. List with 'marksman tool list'." % args.id)
+        return 2
+    changed = []
+    for attr, value in (("name", args.name), ("category", args.category),
+                        ("projectile", args.projectile), ("notes", args.notes)):
+        if value is not None:
+            setattr(tool, attr, value)
+            changed.append(attr)
+    if args.projectile_mm is not None:
+        tool.projectile_mm = args.projectile_mm or None
+        changed.append("projectile_mm")
+    if args.is_powered is not None:
+        tool.is_powered = args.is_powered
+        changed.append("powered")
+    if args.click is not None:
+        try:
+            tool.sight_click_mrad = tracker.parse_click(args.click) if args.click else None
+        except ValueError as e:
+            print("error: %s" % e)
+            return 2
+        changed.append("sight click")
+    if not changed:
+        print("Nothing to change. Pass --name, --category, --click, ...")
+        return 0
+    if args.category is not None:
+        tool.category = normalize_category(tool.category)
+    db.save()
+    print("Updated %s: %s" % (tool.id, ", ".join(changed)))
     return 0
 
 
@@ -879,6 +916,72 @@ def cmd_export(args: argparse.Namespace) -> int:
 # Drills
 # --------------------------------------------------------------------------- #
 
+def cmd_import(args: argparse.Namespace) -> int:
+    """Merge another Marksman database (or a Drive backup) into this one.
+
+    Union by id, and nothing already here is overwritten -- so importing the
+    same file twice changes nothing the second time.
+    """
+    db = Database.load(args.db)
+    p = _make_painter(args, db)
+    try:
+        with open(args.file, "r", encoding="utf-8") as fh:
+            raw = json.load(fh)
+    except (OSError, ValueError) as e:
+        print(p.bad("error: can't read %s (%s)" % (args.file, e)))
+        return 2
+    if not isinstance(raw, dict) or not isinstance(raw.get("sessions"), list):
+        print(p.bad("error: %s isn't a Marksman database or backup." % args.file))
+        print(p.muted("  Expected the app's own JSON file, or the bundle the "
+                      "Drive tab syncs. A CSV/JSON export is a report, not a "
+                      "backup -- it can't be imported."))
+        return 2
+    try:
+        other = Database.from_dict(raw, path=args.file)
+    except (KeyError, TypeError, ValueError) as e:
+        print(p.bad("error: that file is damaged (%s)" % e))
+        return 2
+
+    new_tools = [t for t in other.tools.values() if t.id not in db.tools]
+    new_faces = [t for t in other.custom_targets.values()
+                 if t.name.lower() not in db.custom_targets]
+    known = set(db.tools) | set(t.id for t in new_tools)
+    new_sessions, orphans = [], 0
+    for sess in other.sessions.values():
+        if sess.id in db.sessions:
+            continue
+        if sess.tool_id not in known:      # a session with no tool can't be scoped
+            orphans += 1
+            continue
+        new_sessions.append(sess)
+
+    print(p.title("Importing %s" % os.path.basename(args.file)))
+    print("  " + p.label("tools    : ") + p.value("%d new" % len(new_tools))
+          + p.muted(" of %d" % len(other.tools)))
+    print("  " + p.label("sessions : ") + p.value("%d new" % len(new_sessions))
+          + p.muted(" of %d" % len(other.sessions)))
+    if new_faces:
+        print("  " + p.label("faces    : ") + p.value("%d new" % len(new_faces)))
+    if orphans:
+        print("  " + p.muted("%d session(s) skipped: their tool isn't in either "
+                             "file." % orphans))
+    if args.dry_run:
+        print(p.muted("Dry run -- nothing written. Re-run without --dry-run."))
+        return 0
+    if not (new_tools or new_sessions or new_faces):
+        print(p.muted("Nothing to add; this database already has it all."))
+        return 0
+    for t in new_tools:
+        db.tools[t.id] = t
+    for f in new_faces:
+        db.custom_targets[f.name.lower()] = f
+    for sess in new_sessions:
+        db.sessions[sess.id] = sess
+    db.save()
+    print(p.good("Merged into %s" % db.path))
+    return 0
+
+
 def cmd_drill(args: argparse.Namespace) -> int:
     action = getattr(args, "drill_action", None)
     if action == "show":
@@ -1232,7 +1335,8 @@ def cmd_logo(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="marksman",
-        description="Progress tracker for airsoft marksmanship: analyse "
+        description="Progress tracker for marksmanship with whatever you "
+                    "shoot: analyse "
                     "marked-up target images and track progress over time.",
     )
     p.add_argument("--db", default=DEFAULT_DB_PATH,
@@ -1266,6 +1370,20 @@ def build_parser() -> argparse.ArgumentParser:
                          "error into clicks to dial.")
     wa.add_argument("--notes", default="")
     wa.set_defaults(func=cmd_tool_add)
+    ws = wsub.add_parser("set", help="change an existing tool")
+    ws.add_argument("--id", required=True, help="tool id or name")
+    ws.add_argument("--name")
+    ws.add_argument("--category")
+    ws.add_argument("--projectile")
+    ws.add_argument("--projectile-mm", type=float, dest="projectile_mm")
+    ws.add_argument("--powered", dest="is_powered", action="store_true",
+                    default=None)
+    ws.add_argument("--manual", dest="is_powered", action="store_false")
+    ws.add_argument("--click", help="sight click value ('0.1mrad', '1/4moa'); "
+                                    "pass '' to clear it")
+    ws.add_argument("--notes")
+    ws.set_defaults(func=cmd_tool_set)
+
     wl = wsub.add_parser("list", help="list tools")
     wl.set_defaults(func=cmd_tool_list)
 
@@ -1430,6 +1548,14 @@ def build_parser() -> argparse.ArgumentParser:
     wb.add_argument("--new-key", action="store_true", dest="new_key",
                     help="issue a fresh access key (invalidates existing links)")
     wb.set_defaults(func=cmd_web)
+
+    # import (merge another database or a Drive backup)
+    ip = sub.add_parser("import", help="merge another Marksman database or "
+                                       "Drive backup into this one")
+    ip.add_argument("file", help="the other .json database or backup")
+    ip.add_argument("--dry-run", action="store_true", dest="dry_run",
+                    help="report what would be added, write nothing")
+    ip.set_defaults(func=cmd_import)
 
     # logo (generate the app icon)
     lp = sub.add_parser("logo", help="generate the Marksman logo PNG + .ico")
