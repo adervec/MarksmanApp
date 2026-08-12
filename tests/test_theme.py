@@ -189,12 +189,13 @@ class TestThemeCli(unittest.TestCase):
     def test_preview_named_and_current(self):
         code, out = self.run_cli("theme", "preview", "inferno")
         self.assertEqual(code, 0)
-        self.assertIn("Inferno", strip_ansi(out))
+        # Ask the module for the display name -- skins get renamed.
+        self.assertIn(get_theme("inferno").title, strip_ansi(out))
 
         self.run_cli("theme", "set", "recon")
         code, out = self.run_cli("theme", "preview")           # current skin
         self.assertEqual(code, 0)
-        self.assertIn("Night Recon", strip_ansi(out))
+        self.assertIn(get_theme("recon").title, strip_ansi(out))
 
     def test_reports_stay_plain_when_not_a_tty(self):
         # Captured output is not a terminal, so even a chosen skin stays plain.

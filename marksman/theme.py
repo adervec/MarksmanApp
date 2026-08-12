@@ -5,6 +5,11 @@ ramp, the horizontal-rule character, a marker glyph) that give the reports a
 distinct look.  Each skin has an original name and its own colour palette and
 texture; there are no third-party names, marks, or assets.
 
+``mono`` stays the default: it emits no colour at all, which is what keeps
+piped and redirected output byte-for-byte stable.  ``foam`` is the house style
+-- it is what the desktop and phone apps wear, and what ``marksman theme set
+foam`` gives the terminal.
+
 Everything here is pure standard library.  Colours are emitted as 256-colour
 SGR sequences and are written *only* when output is going to a capable terminal
 (a TTY, with ``NO_COLOR`` unset).  When colour is disabled every helper returns
@@ -150,8 +155,32 @@ _THEME_LIST: List[Theme] = [
         spark=DEFAULT_SPARK, rule_char="-", glyph="*",
     ),
     Theme(
-        key="recon", title="Night Recon",
-        inspired_by="night-vision phosphor green and amber",
+        key="foam", title="Foam Dart",
+        inspired_by="safety orange and foam cream over a soft teal",
+        c_title=fg(208, bold=True), c_rule=fg(94), c_label=fg(180),
+        c_value=fg(231, bold=True), c_unit=fg(137), c_accent=fg(214),
+        c_good=fg(43), c_bad=fg(203), c_muted=fg(244),
+        spark=".:-=o0O@", rule_char="-", glyph="o",
+    ),
+    Theme(
+        key="garden", title="Garden Skirmish",
+        inspired_by="cut grass, sunshine and a bright dart streak",
+        c_title=fg(112, bold=True), c_rule=fg(64), c_label=fg(150),
+        c_value=fg(231, bold=True), c_unit=fg(107), c_accent=fg(214),
+        c_good=fg(82), c_bad=fg(209), c_muted=fg(244),
+        spark=".,:;+*o@", rule_char="~", glyph="^",
+    ),
+    Theme(
+        key="blockfort", title="Block Fort",
+        inspired_by="cardboard walls, parcel tape and foam-tipped darts",
+        c_title=fg(179, bold=True), c_rule=fg(94), c_label=fg(180),
+        c_value=fg(231, bold=True), c_unit=fg(143), c_accent=fg(220),
+        c_good=fg(108), c_bad=fg(167), c_muted=fg(242),
+        spark="._-=+*#@", rule_char="=", glyph="#",
+    ),
+    Theme(
+        key="recon", title="Glow Dark",
+        inspired_by="glow-in-the-dark green under a warm amber",
         c_title=fg(46, bold=True), c_rule=fg(28), c_label=fg(108),
         c_value=fg(231, bold=True), c_unit=fg(65), c_accent=fg(208),
         c_good=fg(46), c_bad=fg(196), c_muted=fg(240),
@@ -166,16 +195,16 @@ _THEME_LIST: List[Theme] = [
         spark=".:-=+*#@", rule_char="=", glyph=">",
     ),
     Theme(
-        key="inferno", title="Inferno",
-        inspired_by="molten blood-red and hellfire orange",
+        key="inferno", title="Hot Streak",
+        inspired_by="a molten red run into bright orange",
         c_title=fg(196, bold=True), c_rule=fg(88), c_label=fg(173),
         c_value=fg(231, bold=True), c_unit=fg(130), c_accent=fg(208),
         c_good=fg(214), c_bad=fg(124), c_muted=fg(240),
         spark=".:^*xX#@", rule_char="=", glyph="X",
     ),
     Theme(
-        key="frontline", title="Frontline",
-        inspired_by="steel-blue smoke cut with dog-tag orange",
+        key="frontline", title="Sideline",
+        inspired_by="team-jersey blue cut with a whistle orange",
         c_title=fg(208, bold=True), c_rule=fg(66), c_label=fg(110),
         c_value=fg(231, bold=True), c_unit=fg(109), c_accent=fg(39),
         c_good=fg(78), c_bad=fg(203), c_muted=fg(244),
@@ -198,8 +227,8 @@ _THEME_LIST: List[Theme] = [
         spark=".:oO0Q#@", rule_char="=", glyph="!",
     ),
     Theme(
-        key="dust", title="Dust",
-        inspired_by="desert sand versus a cool tactical blue",
+        key="dust", title="Sandlot",
+        inspired_by="backyard sand against a cool pool blue",
         c_title=fg(222, bold=True), c_rule=fg(137), c_label=fg(180),
         c_value=fg(231, bold=True), c_unit=fg(144), c_accent=fg(39),
         c_good=fg(78), c_bad=fg(196), c_muted=fg(244),
@@ -214,16 +243,16 @@ _THEME_LIST: List[Theme] = [
         spark=".:-=+*o#", rule_char="=", glyph="o",
     ),
     Theme(
-        key="dropzone", title="Drop Zone",
-        inspired_by="crimson on gunmetal slate",
+        key="dropzone", title="Bunker",
+        inspired_by="team red on cool concrete grey",
         c_title=fg(197, bold=True), c_rule=fg(240), c_label=fg(250),
         c_value=fg(231, bold=True), c_unit=fg(245), c_accent=fg(203),
         c_good=fg(84), c_bad=fg(124), c_muted=fg(240),
         spark=".:-=+*#@", rule_char="-", glyph=">",
     ),
     Theme(
-        key="tropic", title="Far Outpost",
-        inspired_by="lush tropical teal under a sunset orange",
+        key="tropic", title="Back Garden",
+        inspired_by="lush green teal under a sunset orange",
         c_title=fg(214, bold=True), c_rule=fg(29), c_label=fg(108),
         c_value=fg(231, bold=True), c_unit=fg(72), c_accent=fg(43),
         c_good=fg(41), c_bad=fg(167), c_muted=fg(244),

@@ -247,7 +247,7 @@ class Tool:
     id: str
     name: str
     category: str = "Other"
-    projectile: str = ""       # free text, e.g. "6mm 0.25g", "Elite dart"
+    projectile: str = ""       # free text, e.g. "13mm foam dart", "6mm 0.25g"
     is_powered: bool = False   # gas / battery / air driven rather than manual
     # Projectile diameter in mm; used to give shots their physical size when
     # scoring "edge breaks the line" and when detecting impacts.

@@ -1,15 +1,21 @@
 """Generate the Marksman logo/app icon with the built-in PNG writer (no deps).
 
-Draws a reticle-over-target badge with a tight shot group, reusing the same
-pure-Python drawing primitives as the session recreations. Produces a PNG and a
-Windows ``.ico`` (a 256px PNG embedded in the ICO container, which Windows 10/11
-render for shortcut icons).
+Draws a foam dart striking a target: concentric teal rings on a dark badge,
+with a cream foam dart -- orange tip, foam body -- coming in from the lower
+left. Reuses the same pure-Python drawing primitives as the session
+recreations, and produces a PNG plus a Windows ``.ico`` (a 256px PNG in an ICO
+container, which Windows 10/11 render for shortcut icons).
+
+The dart shape is generic: a soft cylinder with a rounded head, drawn from
+scratch here. No third-party brand, logo, product line or trade dress is used
+or referenced -- see THIRD_PARTY_NOTICES.md.
 
     python -m marksman logo --out assets      # marksman.png + marksman.ico
 """
 
 from __future__ import annotations
 
+import math
 import os
 import struct
 from typing import Tuple
@@ -17,14 +23,39 @@ from typing import Tuple
 from . import imageio
 from .render import _fill_disk, _hline, _ring, _vline
 
-# Badge palette: deep navy field, neon rings, orange shot group.
-_BG = (16, 20, 28)
-_FACE = (24, 30, 42)
-_RING = (45, 212, 160)
-_RING_DIM = (32, 120, 96)
-_RETICLE = (226, 232, 240)
-_HIT = (255, 150, 40)
-_HIT_EDGE = (24, 30, 42)
+# Badge palette: warm slate field, teal rings, a cream dart with an orange tip.
+_BG = (20, 24, 33)
+_FACE = (29, 36, 48)
+_RING = (47, 196, 178)
+_RING_DIM = (28, 116, 108)
+_FOAM = (245, 235, 218)
+_FOAM_SHADE = (206, 194, 175)
+_TIP = (255, 122, 41)
+_OUTLINE = (20, 18, 14)
+
+
+def _capsule(img: imageio.Image, x0: float, y0: float, x1: float, y1: float,
+             r: float, color: Tuple[int, int, int]) -> None:
+    """Fill every pixel within ``r`` of the segment (x0,y0)-(x1,y1).
+
+    A rounded cylinder is exactly what a foam dart is, so the whole dart is
+    two of these: the foam body and the softer tip.
+    """
+    dx, dy = x1 - x0, y1 - y0
+    length2 = dx * dx + dy * dy
+    lo_x = int(math.floor(min(x0, x1) - r))
+    hi_x = int(math.ceil(max(x0, x1) + r))
+    lo_y = int(math.floor(min(y0, y1) - r))
+    hi_y = int(math.ceil(max(y0, y1) + r))
+    rr = r * r
+    for y in range(max(0, lo_y), min(img.height - 1, hi_y) + 1):
+        for x in range(max(0, lo_x), min(img.width - 1, hi_x) + 1):
+            px, py = x - x0, y - y0
+            t = 0.0 if length2 <= 0 else (px * dx + py * dy) / length2
+            t = 0.0 if t < 0.0 else (1.0 if t > 1.0 else t)
+            ex, ey = px - t * dx, py - t * dy
+            if ex * ex + ey * ey <= rr:
+                img.set(x, y, *color)
 
 
 def make_logo(size: int = 512) -> imageio.Image:
@@ -42,24 +73,25 @@ def make_logo(size: int = 512) -> imageio.Image:
         _ring(img, cx, cy, face_r * frac, _RING if i % 2 == 0 else _RING_DIM,
               thickness=max(2.0, unit * 1.1))
 
-    # Gapped reticle crosshair (vertical + horizontal, clear centre).
-    reach = int(face_r * 0.86)
-    gap = int(size * 0.11)
-    tw = max(1, int(unit * 0.9))          # half thickness
-    for d in range(-tw, tw + 1):
-        _vline(img, cx + d, cy - reach, cy - gap, _RETICLE)
-        _vline(img, cx + d, cy + gap, cy + reach, _RETICLE)
-        _hline(img, cy + d, cx - reach, cx - gap, _RETICLE)
-        _hline(img, cy + d, cx + gap, cx + reach, _RETICLE)
+    # The dart: flying in from the lower left, tip just past the middle.
+    tip_x, tip_y = cx + size * 0.06, cy - size * 0.06
+    ux, uy = 0.82, 0.57                      # unit vector back down the shaft
+    reach = size * 0.58
+    tail_x, tail_y = tip_x - ux * reach, tip_y + uy * reach
+    body_r = size * 0.058                    # slim: a dart is ~5x longer than wide
+    tip_len = body_r * 1.55
+    neck_x, neck_y = tip_x - ux * tip_len, tip_y + uy * tip_len
 
-    # A tight group, high-and-right of centre (a good honest cluster).
-    group_r = size * 0.055
-    offsets = [(-0.6, -0.9), (0.7, -0.4), (-0.2, 0.5), (1.1, 0.7), (0.2, -0.1)]
-    for ox, oy in offsets:
-        px = int(cx + size * 0.06 + ox * group_r)
-        py = int(cy - size * 0.06 + oy * group_r)
-        _fill_disk(img, px, py, group_r + max(1.5, unit * 0.5), _HIT_EDGE)
-        _fill_disk(img, px, py, group_r, _HIT)
+    # Outline first so body and tip sit inside a single dark rim.
+    _capsule(img, tail_x, tail_y, tip_x, tip_y, body_r * 1.34 + unit * 0.7,
+             _OUTLINE)
+    _capsule(img, tail_x, tail_y, neck_x, neck_y, body_r, _FOAM)
+    # A soft shadow along the underside gives the foam some roundness.
+    _capsule(img, tail_x + uy * body_r * 0.5, tail_y + ux * body_r * 0.5,
+             neck_x + uy * body_r * 0.5, neck_y + ux * body_r * 0.5,
+             body_r * 0.26, _FOAM_SHADE)
+    _capsule(img, neck_x, neck_y, tip_x, tip_y, body_r * 1.34, _TIP)
+
     return img
 
 

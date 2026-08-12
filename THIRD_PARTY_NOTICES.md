@@ -9,6 +9,30 @@ pull in, and their licenses, for transparency.
 All licenses below are permissive (no copyleft obligations on Marksman or on
 your use of it).
 
+## Trademarks and brand independence
+
+Marksman is an **independent hobby project**. It is not affiliated with,
+sponsored by, endorsed by, or connected to **any** blaster, toy, sporting‑goods
+or equipment manufacturer, distributor or retailer.
+
+Everything in this repository is original work:
+
+- The name "Marksman", the logo, the app icon, every colour palette ("skin"),
+  and all in‑app artwork are drawn from scratch by this project. The foam dart
+  in the logo is a **generic** shape — a soft cylinder with a rounded head —
+  drawn by [`marksman/logo.py`](marksman/logo.py) with the built‑in PNG writer.
+- The bundled equipment packs describe **generic categories** of equipment
+  (springer, flywheel, pump‑action, and so on). They name no brand, no product
+  line, and no model.
+- No third‑party logo, wordmark, product name, packaging, colour scheme or
+  other trade dress is reproduced, imitated or referenced anywhere in this
+  project's code, assets or documentation.
+
+Where a user writes their own equipment pack, whatever they put in it is
+**their** content, not this project's — see
+[DISCLAIMER.md](DISCLAIMER.md). Any trademark that may be mentioned in
+user‑authored content remains the property of its owner.
+
 ## Runtime dependencies
 
 **None.** Marksman runs on a stock Python 3.9+ interpreter with nothing

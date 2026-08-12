@@ -29,15 +29,18 @@ from typing import List, Optional, Tuple
 from . import imageio
 from .models import Session, TargetSpec
 
-# Palette -- a classic black-bull paper target on off-white.
+# Palette -- a black-bull paper target, hit by foam darts: each impact is
+# drawn as a dart seen end-on (a cream foam collar around a bright tip)
+# rather than as a bullet hole.
 _BG = (252, 250, 246)
 _BLACK = (26, 26, 26)
 _RINGLINE_ON_WHITE = (70, 70, 70)
 _RINGLINE_ON_BLACK = (232, 232, 232)
 _POA = (150, 150, 150)
-_SHOT = (206, 32, 32)
-_SHOT_EDGE = (252, 250, 246)     # thin light rim so shots read on the black
-_GROUP = (38, 96, 208)
+_SHOT = (255, 122, 41)           # dart tip -- safety orange
+_SHOT_FOAM = (245, 235, 218)     # the foam collar around it
+_SHOT_EDGE = (32, 30, 27)        # thin dark outline so it reads on any ring
+_GROUP = (47, 196, 178)
 
 DEFAULT_SIZE_PX = 720
 DEFAULT_MARGIN_PX = 26
@@ -175,7 +178,8 @@ def render_session(session: Session, target: Optional[TargetSpec] = None,
     for s in session.shots:
         px, py = to_px(s.x_mm, s.y_mm)
         _fill_disk(img, px, py, r_px + 1.4, _SHOT_EDGE)
-        _fill_disk(img, px, py, r_px, _SHOT)
+        _fill_disk(img, px, py, r_px, _SHOT_FOAM)
+        _fill_disk(img, px, py, r_px * 0.6, _SHOT)
 
     return img
 

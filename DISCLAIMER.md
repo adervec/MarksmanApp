@@ -109,12 +109,20 @@ project are referenced for information only. Details may be incomplete,
 inaccurate, or out of date, and **no affiliation, sponsorship, or endorsement
 is implied** in either direction.
 
-## Trademarks
+## Trademarks & independence
 
-All product, brand, and organization names referenced in this project are the
-property of their respective owners and are used only nominatively/descriptively
-to identify the things they name. Their use here does **not** imply any
-affiliation with, sponsorship by, or endorsement from those owners. See also
+Marksman is an independent hobby project and is **not affiliated with,
+sponsored by, endorsed by, or connected to any blaster, toy, sporting‑goods or
+equipment manufacturer, distributor or retailer.** The name, logo, artwork,
+colour palettes and bundled packs are original work; no third‑party logo,
+wordmark, product name or trade dress is reproduced or imitated anywhere in
+this project. The bundled packs describe generic categories of equipment and
+name no brand or model.
+
+Any product, brand, or organization name that appears in **user‑authored**
+content (an equipment pack you install or write) belongs to its owner, is used
+only nominatively to identify the thing it names, and implies no affiliation or
+endorsement in either direction. See also
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Limitation of liability

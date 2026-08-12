@@ -335,6 +335,20 @@ def categories(db=None) -> List[str]:
     return out
 
 
+def default_target(db=None) -> str:
+    """The face to offer first: the first one from the gentlest active pack.
+
+    Packs load in sensitivity order, so a stock install lands on a foam dart
+    face rather than on whichever name happens to sort first alphabetically.
+    """
+    for pack in active(db):
+        for face in pack.get("targets") or []:
+            name = face.get("name")
+            if name:
+                return name
+    return ""
+
+
 def term(word: str, db=None) -> str:
     """A pack's word for a core concept ('tool', 'projectile'), else the core one.
 

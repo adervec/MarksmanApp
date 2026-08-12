@@ -2,23 +2,26 @@
 
 Examples
 --------
-    # Register a tool -- anything that launches a projectile
-    marksman tool add --id b1 --name "Training AEG" \
-        --category "AEG" --projectile 6mm --projectile-mm 6.0
+    # Register a blaster -- or anything else that launches a projectile
+    marksman tool add --id d1 --name "Garden Blaster" \
+        --category "Flywheel" --projectile "13mm foam dart" --projectile-mm 13.0
+
+    # Print a face to shoot at, at true physical size
+    marksman targets --print "Foam Practice 5m" --distance 5
 
     # Analyse a marked-up target image (red marker dots), score it, save it
-    marksman analyze --tool b1 --target "Airsoft Practice 10m" --distance 10 \
+    marksman analyze --tool d1 --target "Foam Practice 5m" --distance 5 \
         --image shots.png --color red --auto-center
 
     # Or enter shot coordinates by hand (millimetres from point of aim)
-    marksman analyze --tool b1 --target "Airsoft Practice 10m" --distance 10 \
-        --shots "1.2,3.4  -2.0,5.1  0.5,-1.0"
+    marksman analyze --tool d1 --target "Foam Practice 5m" --distance 5 \
+        --shots "12,34  -20,51  5,-10"
 
     # Track progress
     marksman progress                 # overall
     marksman progress --by-category
     marksman progress --by-tool
-    marksman progress --tool ap1 --sessions
+    marksman progress --tool d1 --sessions
 """
 
 from __future__ import annotations
@@ -1376,7 +1379,7 @@ def build_parser() -> argparse.ArgumentParser:
                     help="grouping category; 'marksman pack show' lists the "
                          "ones your packs offer")
     wa.add_argument("--projectile", default="",
-                    help="free text, e.g. '6mm 0.25g' or 'Elite dart'")
+                    help="free text, e.g. '13mm foam dart' or '6mm 0.25g'")
     wa.add_argument("--projectile-mm", type=float, dest="projectile_mm",
                     help="projectile diameter in mm (improves scoring)")
     wa.add_argument("--powered", action="store_true", dest="is_powered",

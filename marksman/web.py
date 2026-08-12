@@ -189,6 +189,7 @@ def _state(db: Database) -> Dict[str, Any]:
         "goals": goals_mod.summary(db),
         "sessions": [_sess_row(db, s) for s in sessions[:50]],
         "categories": packs_mod.categories(db),
+        "defaultTarget": packs_mod.default_target(db),
         "goalMetrics": sorted(METRICS),
         "sheets": sheets_mod.catalog(),
         "packs": pack_rows,
@@ -551,11 +552,11 @@ class Handler(BaseHTTPRequestHandler):
         """Enough for "add to home screen" to give a real app icon."""
         return {
             "name": "Marksman", "short_name": "Marksman",
-            "description": "Marksmanship drills and progress tracking.",
+            "description": "Foam dart drills and progress tracking.",
             # The key rides along so an installed shortcut keeps working.
             "start_url": "/?k=" + self.server.token,
             "scope": "/", "display": "standalone", "orientation": "any",
-            "background_color": "#12161a", "theme_color": "#12161a",
+            "background_color": "#141821", "theme_color": "#141821",
             "icons": [{"src": "/icon.png", "sizes": "512x512",
                        "type": "image/png", "purpose": "any maskable"}],
         }
@@ -668,7 +669,7 @@ PAGE = r"""<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#12161a">
+<meta name="theme-color" content="#141821">
 <!-- use-credentials: the manifest is behind the same access code as the app. -->
 <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials">
 <link rel="apple-touch-icon" href="/icon.png">
@@ -678,8 +679,9 @@ PAGE = r"""<!DOCTYPE html>
 <meta name="apple-mobile-web-app-title" content="Marksman">
 <title>Marksman</title>
 <style>
-:root{--bg:#12161a;--card:#1b2127;--line:#2a323b;--fg:#e8e6e1;--mut:#8a949e;
-      --acc:#e8b34b;--good:#7fc97f;--bad:#e06c60;--field:#12171c}
+:root{--bg:#141821;--card:#1d2430;--line:#2f3a49;--fg:#f2ece1;--mut:#95a0af;
+      --acc:#ff7a29;--acc2:#2fc4b2;--foam:#f5ebda;--tip:#ffd24a;
+      --good:#2fc4b2;--bad:#ff5c5c;--field:#151b24}
 *{box-sizing:border-box;margin:0}
 body{background:var(--bg);color:var(--fg);
      font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -695,7 +697,13 @@ body.rotcw #scroll,body.rotccw #scroll{height:100%;overflow-y:auto}
 header{position:sticky;top:0;z-index:2;background:var(--bg);padding:12px 16px;
        border-bottom:1px solid var(--line);display:flex;justify-content:space-between;
        align-items:baseline}
-header b{color:var(--acc);letter-spacing:.04em}
+header b{color:var(--acc);letter-spacing:.06em}
+/* A foam dart, in CSS: cream body, orange tip, lying beside the wordmark. */
+.dart{display:inline-block;width:26px;height:9px;border-radius:5px;
+  background:linear-gradient(90deg,var(--acc) 0 36%,var(--foam) 36% 100%);
+  box-shadow:inset 0 -2px 0 rgba(0,0,0,.18);vertical-align:-1px;margin-right:8px}
+.card{border-radius:14px}
+.btn,.ghost,.x{border-radius:10px}
 main{max-width:560px;margin:0 auto;padding:12px}
 section{display:none}section.on{display:block}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;
@@ -710,7 +718,7 @@ label{font-size:13px;color:var(--mut);display:block;margin:10px 0 4px}
 .row{display:flex;gap:8px;align-items:flex-end}.row>*{flex:1}
 #addTool{flex:0 0 56px}
 button{border:0;border-radius:8px;padding:12px;font-size:16px;cursor:pointer}
-.btn{width:100%;background:var(--acc);color:#14181c;font-weight:700}
+.btn{width:100%;background:var(--acc);color:#1a1206;font-weight:700}
 .ghost{background:var(--field);color:var(--fg);border:1px solid var(--line)}
 .small{width:auto;padding:8px 12px;font-size:14px}
 canvas{width:100%;max-width:420px;display:block;margin:0 auto;touch-action:none;
@@ -727,7 +735,7 @@ nav button.on{color:var(--acc);font-weight:700}
 .item:last-child{border-bottom:0}
 .ok{color:var(--good)}.no{color:var(--bad)}
 #toast{position:fixed;left:50%;transform:translateX(-50%);top:14px;z-index:9;
-  background:var(--acc);color:#14181c;font-weight:700;border-radius:8px;
+  background:var(--acc);color:#1a1206;font-weight:700;border-radius:10px;
   padding:10px 16px;display:none;max-width:90%}
 #orient{background:none;border:1px solid var(--line);color:var(--mut);
   border-radius:6px;padding:4px 9px;font-size:12px}
@@ -752,7 +760,7 @@ nav button{font-size:13px}
 <body>
 <div id="rot">
 <div id="scroll">
-<header><b>MARKSMAN</b><span class="hright">
+<header><b><i class="dart"></i>MARKSMAN</b><span class="hright">
   <button id="orient" aria-label="Screen orientation"
     title="lock the layout portrait or landscape">auto</button>
   <span id="points" class="muted"></span></span></header>
@@ -1165,6 +1173,7 @@ function renderLogControls(){
   const opts = [{id:"", name:"— free session —"}].concat(S.drills);
   fillSelect($("drill"), opts, d => d.id, d => d.name);
   fillSelect($("target"), S.targets, t => t.name, t => t.name);
+  if (S.defaultTarget) $("target").value = S.defaultTarget;
   const keepDesign = $("design").value;
   fillSelect($("design"), [["", "This target face"]].concat(S.sheets),
              r => r[0], r => r[0] ? r[0] + " — " + r[1].split(";")[0] : r[1]);
@@ -1197,7 +1206,7 @@ function drawTarget(){
   c.style.height = size + "px";
   const ctx = c.getContext("2d");
   ctx.scale(dpr, dpr);
-  ctx.fillStyle = "#20272e";
+  ctx.fillStyle = "#232b36";
   ctx.fillRect(0, 0, size, size);
   if (!curTarget) return;
   const k = size / curTarget.face_mm, cx = size / 2, cy = size / 2;
@@ -1205,9 +1214,9 @@ function drawTarget(){
   for (let i = rings.length - 1; i >= 0; i--){
     ctx.beginPath();
     ctx.arc(cx, cy, rings[i] / 2 * k, 0, 7);
-    ctx.fillStyle = i < 2 ? "#0e1114" : (i % 2 ? "#232b33" : "#1d242b");
+    ctx.fillStyle = i < 2 ? "#12181f" : (i % 2 ? "#2b3542" : "#242d38");
     ctx.fill();
-    ctx.strokeStyle = "#39434d";
+    ctx.strokeStyle = "#3d4a59";
     ctx.stroke();
   }
   ctx.strokeStyle = "#5b6771";
@@ -1216,20 +1225,24 @@ function drawTarget(){
 
   if (lastStats && lastStats.n > 1){
     const gx = cx + lastStats.cx * k, gy = cy - lastStats.cy * k;
-    ctx.strokeStyle = "#e8b34b";
+    ctx.strokeStyle = "#2fc4b2";
     ctx.setLineDash([4, 4]);
     ctx.beginPath(); ctx.arc(gx, gy, lastStats.mean_radius_mm * k, 0, 7); ctx.stroke();
     ctx.setLineDash([]);
     ctx.beginPath(); ctx.moveTo(gx - 6, gy); ctx.lineTo(gx + 6, gy);
     ctx.moveTo(gx, gy - 6); ctx.lineTo(gx, gy + 6); ctx.stroke();
   }
-  const r = Math.max(4, 3 * k);
+  const r = Math.max(5, 3 * k);
   shots.forEach((s, i) => {
     const x = cx + s.x_mm * k, y = cy - s.y_mm * k;
+    // A dart end-on: foam collar, orange tip, numbered.
     ctx.beginPath(); ctx.arc(x, y, r, 0, 7);
-    ctx.fillStyle = "#e06c60"; ctx.fill();
-    ctx.strokeStyle = "#12161a"; ctx.stroke();
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = "#f5ebda"; ctx.fill();
+    ctx.strokeStyle = "#141821"; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, r * 0.62, 0, 7);
+    ctx.fillStyle = "#ff7a29"; ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.fillStyle = "#1a1206";
     ctx.font = "bold " + Math.max(9, r) + "px system-ui";
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(String(i + 1), x, y);

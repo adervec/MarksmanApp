@@ -1,12 +1,12 @@
 [project]
 name = "marksman"
-version = "0.7.0"
-description = "Marksmanship drills and progress tracking for any launcher -- airsoft, foam darts, or whatever you install a pack for: tiered drills, target-image analysis, charts, desktop GUI, phone web app and Google Drive sync. All standard library."
+version = "0.8.0"
+description = "Marksmanship drills and progress tracking for foam dart blasters -- and anything else you install a pack for: tiered drills, target-image analysis, printable targets, charts, desktop GUI, phone web app and Google Drive sync. All standard library."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "Adam Erik Eryavec" }]
-keywords = ["marksmanship", "airsoft", "nerf", "target", "grouping", "drills", "cli", "gui", "web", "mobile", "google-drive", "image-analysis", "coach"]
+keywords = ["marksmanship", "foam-darts", "dart-blaster", "blaster", "toy", "airsoft", "target", "printable-targets", "grouping", "drills", "cli", "gui", "web", "mobile", "google-drive", "image-analysis", "coach"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",

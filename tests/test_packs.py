@@ -1,6 +1,7 @@
 """Equipment pack tests: validation, the sensitivity ceiling, and the split
 between the app (engine) and packs (content)."""
 
+import io
 import json
 import os
 import shutil
@@ -185,6 +186,68 @@ class TestCeilingAndToggles(unittest.TestCase):
         got = packs.install(src, self.db)
         self.assertEqual(got["id"], "fresh")
         self.assertTrue(os.path.exists(os.path.join(self.tmp, "fresh.json")))
+
+
+class TestBrandIndependence(unittest.TestCase):
+    """The project ships its own look and names no one else's products.
+
+    The aesthetic is foam-dart, which is a *generic* thing -- a soft cylinder
+    with a rounded head. Trademarked brands, product lines and models belong to
+    their owners and appear nowhere in what we ship. A user's own pack is their
+    content and is not scanned here.
+    """
+
+    #: Marks that must not appear in shipped code, assets or documentation.
+    FORBIDDEN = (
+        "nerf", "hasbro", "n-strike", "nstrike", "accustrike",
+        "zombie strike", "elite dart", "mega dart", "ultra dart",
+        "rival ball", "x-shot", "adventure force",
+    )
+
+    SHIPPED = ("marksman", "README.md", "DISCLAIMER.md",
+               "THIRD_PARTY_NOTICES.md", "CONTRIBUTING.md", "SECURITY.md",
+               "pyproject.toml", "demo.py")
+
+    def _files(self):
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        for entry in self.SHIPPED:
+            path = os.path.join(root, entry)
+            if os.path.isfile(path):
+                yield path
+            for base, dirs, names in os.walk(path):
+                dirs[:] = [d for d in dirs if d != "__pycache__"]
+                for name in names:
+                    if name.endswith((".py", ".json", ".md", ".toml")):
+                        yield os.path.join(base, name)
+
+    def test_no_third_party_marks_anywhere(self):
+        hits = []
+        for path in self._files():
+            with io.open(path, encoding="utf-8") as fh:
+                low = fh.read().lower()
+            for mark in self.FORBIDDEN:
+                if mark in low:
+                    hits.append("%s: %r" % (os.path.basename(path), mark))
+        self.assertEqual(hits, [], "third-party marks in shipped files: %s" % hits)
+
+    def test_bundled_packs_name_no_brand_or_model(self):
+        for pack in packs.discover():
+            if not pack.get("bundled"):
+                continue
+            blob = json.dumps(pack).lower()
+            for mark in self.FORBIDDEN:
+                self.assertNotIn(mark, blob, pack.get("id"))
+
+    def test_the_house_skin_exists_and_stays_plain_by_default(self):
+        from marksman import theme
+        self.assertIn("foam", theme.THEMES)
+        # The terminal default stays the colourless skin: piped output must not
+        # change just because the app got a look.
+        self.assertEqual(theme.DEFAULT_THEME, "mono")
+        self.assertEqual(theme.get_theme(None).key, "mono")
+        # A window has no such constraint, so it wears the house style.
+        from marksman import gui
+        self.assertEqual(gui.palette(None), gui.palette("foam"))
 
 
 if __name__ == "__main__":

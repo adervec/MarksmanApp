@@ -47,13 +47,17 @@ def _term(word: str) -> str:
 # --------------------------------------------------------------------------- #
 
 _BASE = {
-    "bg": "#12151c", "panel": "#1a1f2a", "raised": "#232a38",
-    "fg": "#e6ebf2", "muted": "#8b95a7", "grid": "#2b3444",
-    "face": "#f4f1e8", "ink": "#1b1b1b", "hit": "#ff9628",
+    "bg": "#141821", "panel": "#1d2430", "raised": "#27303e",
+    "fg": "#f2ece1", "muted": "#95a0af", "grid": "#2f3a49",
+    "face": "#f5ebda", "ink": "#1b1b1b", "hit": "#ff7a29",
 }
 
 #: skin key -> the three colours that actually differ between skins
 PALETTES = {
+    # The house style: safety orange, foam cream, soft teal.
+    "foam":      {"accent": "#ff7a29", "good": "#2fc4b2", "bad": "#ff5c5c"},
+    "garden":    {"accent": "#ffc43d", "good": "#7ac74f", "bad": "#ef6f4a"},
+    "blockfort": {"accent": "#f2b544", "good": "#c9a227", "bad": "#d9643a"},
     "mono":      {"accent": "#5b8dd6", "good": "#4caf7d", "bad": "#d16d6d"},
     "recon":     {"accent": "#3ddc7f", "good": "#3ddc7f", "bad": "#ffb547"},
     "orbital":   {"accent": "#4db6ff", "good": "#5fd38d", "bad": "#ffb347"},
@@ -82,8 +86,13 @@ DISCLAIMER = (
 
 
 def palette(key: Optional[str]) -> Dict[str, str]:
+    """Colours for a skin. Unset (a fresh install) wears the house style.
+
+    The terminal defaults to the plain ``mono`` skin so piped output stays
+    stable; a window has no such worry, so it defaults to ``foam``.
+    """
     out = dict(_BASE)
-    out.update(PALETTES.get((key or "mono"), PALETTES["mono"]))
+    out.update(PALETTES.get((key or "foam"), PALETTES["foam"]))
     return out
 
 
@@ -351,7 +360,7 @@ class App(tk.Tk):
                  theme_key: Optional[str] = None):
         tk.Tk.__init__(self)
         self.db = Database.load(db_path)
-        self.theme_key = theme_key or self.db.settings.get("theme") or "mono"
+        self.theme_key = theme_key or self.db.settings.get("theme") or "foam"
         self.pal = palette(self.theme_key)
         self._refreshers = []      # type: List[Any]
 
@@ -471,7 +480,7 @@ class App(tk.Tk):
         bar = ttk.Frame(self)
         bar.pack(fill="x", padx=14, pady=(12, 4))
         ttk.Label(bar, text="Marksman", style="H1.TLabel").pack(side="left")
-        ttk.Label(bar, text="  marksmanship drills & progress",
+        ttk.Label(bar, text="  foam dart drills & progress",
                   style="Muted.TLabel").pack(side="left", pady=(6, 0))
         self._streak_lbl = ttk.Label(bar, text="", style="H2.TLabel")
         self._streak_lbl.pack(side="right")
@@ -805,7 +814,7 @@ class App(tk.Tk):
                               cb=lambda: self._on_drill_pick())
         faces = targets_mod.list_targets()
         if faces and not self._log_target.get():
-            self._log_target.set(faces[0])
+            self._log_target.set(packs_mod.default_target() or faces[0])
         self._w_target = field("Target face", self._log_target,
                                faces, cb=lambda: self._sync_canvas())
         field("Distance (m)", self._log_dist)

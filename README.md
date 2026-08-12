@@ -4,24 +4,33 @@
 
 [![CI](https://github.com/adervec/MarksmanApp/actions/workflows/ci.yml/badge.svg)](https://github.com/adervec/MarksmanApp/actions/workflows/ci.yml)
 
-A drills-and-progress tracker for hitting what you aim at — with **whatever you
-shoot**. It **analyses a marked-up image of a target** (the groupings of your
-hits) into precise marksmanship metrics, judges them against **tiered practice
-standards**, and **tracks your progress over time** — overall, by tool
-**category**, and by **specific tool**. It also **prints the target faces** it
-scores against, at true physical size. Desktop app, **phone-friendly web app**,
-**Google Drive sync**, and a full CLI.
+**Get better at hitting things with foam darts.** Marksman **analyses a
+marked-up photo of a target** (where your darts actually landed) into precise
+marksmanship metrics, judges them against **tiered practice standards**, and
+**tracks your progress over time** — overall, by blaster **category**, and by
+**specific blaster**. It also **prints the target faces** it scores against, at
+true physical size, so you have something to shoot at. Desktop app,
+**phone-friendly web app**, **Google Drive sync**, and a full CLI.
 
-The app is deliberately **equipment-agnostic**: it knows about *tools* that
-launch *projectiles* at *target faces*, and nothing else. The drills, faces and
-vocabulary come from [**equipment packs**](#equipment-packs) — plain JSON files.
-Two are bundled (foam dart blasters and airsoft); write your own for anything.
+Foam darts are what it ships for and what it looks like. Under that, the engine
+is deliberately **equipment-agnostic** — it knows about *tools* that launch
+*projectiles* at *target faces*, and nothing else. Drills, faces and vocabulary
+all come from [**equipment packs**](#equipment-packs), plain JSON files: foam
+dart blasters and airsoft are bundled, and you can write a pack for whatever
+you practise with. **You are responsible for what you install and for whether
+it is legal and safe where you are.**
+
+> **Independent project.** Marksman is not affiliated with, sponsored by, or
+> endorsed by any blaster, toy or equipment manufacturer. The name, logo,
+> artwork and packs are original work, and no brand, product line or model is
+> named anywhere in it — see
+> [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 It is pure Python standard library: **no third-party packages required**
 (works on Python 3.9+). Image analysis reads PNG out of the box; if Pillow
 happens to be installed, JPEG and other formats work too.
 
-<img src="assets/screenshot.png" alt="The Marksman desktop app, showing the dashboard: stat cards, today's adaptive plan, recent sessions and goals" width="100%">
+<img src="assets/screenshot.png" alt="The Marksman desktop app, showing the dashboard: stat cards, today's adaptive plan, recent foam dart sessions and goals" width="100%">
 
 > ⚠️ **Disclaimer — please read.** Marksman is a hobby project by a software
 > developer — **not** a coach, instructor, doctor, or lawyer. It computes
@@ -65,7 +74,10 @@ The same data in any browser on your Wi-Fi — log shots at the field by
 marksman web          # then open the printed URL on your phone
 ```
 
-<img src="assets/screenshot_phone.png" alt="The Marksman web app on a phone: tier points, today's plan and recent sessions" width="320">
+<p>
+<img src="assets/screenshot_phone.png" alt="The Marksman web app on a phone: tier points, today's plan, goals and recent sessions" width="300">
+<img src="assets/screenshot_phone_log.png" alt="Logging a session on a phone: the target face with seven foam dart hits placed on it, group circle and live stats" width="300">
+</p>
 
 Five tabs: **Home** (tier points, today's plan, goals you can set and clear,
 recent sessions, installed packs and their safety notes), **Drills** (the
@@ -158,7 +170,7 @@ The rings are only worth measuring if the paper you shoot matches the face the
 app scores against, so Marksman prints its own — at **true physical size**:
 
 ```bash
-marksman targets --print "Airsoft Practice 10m" --distance 10   # opens a browser
+marksman targets --print "Foam Practice 5m" --distance 5        # opens a browser
 marksman targets --print "Practice Face" --paper a3 -o face.html --no-open
 ```
 
@@ -225,34 +237,34 @@ Your data lives in a single `marksman_data.json` (the shortcut opens in
 # 0) Prefer clicking to typing? Everything below is in the desktop app too.
 python -m marksman gui
 
-# 1) Register a tool -- whatever launches the projectile
-python -m marksman.cli tool add --id b1 --name "Training AEG" \
-    --category "AEG" --projectile 6mm --projectile-mm 6.0
+# 1) Register a blaster (or whatever you shoot -- it's all "tools" inside)
+python -m marksman.cli tool add --id d1 --name "Garden Blaster" \
+    --category "Flywheel" --projectile "13mm foam dart" --projectile-mm 13.0
 
 # 2a) Analyse a photo/scan where each hit is marked with a red dot/circle.
-#     The image spans a 400 mm target face; find the bull automatically.
-python -m marksman.cli analyze --tool b1 --target "Airsoft Practice 10m" \
-    --distance 10 --image my_target.png --color red --auto-center
+#     The image spans the target face; find the bull automatically.
+python -m marksman.cli analyze --tool d1 --target "Foam Practice 5m" \
+    --distance 5 --image my_target.png --color red --auto-center
 
 # 2b) ...or just type the shot coordinates (mm from point of aim):
-python -m marksman.cli analyze --tool b1 --target "Airsoft Practice 10m" \
-    --distance 10 --shots "1.2,3.4  -2.0,5.1  0.5,-1.0"
+python -m marksman.cli analyze --tool d1 --target "Foam Practice 5m" \
+    --distance 5 --shots "12,34  -20,51  5,-10"
 
 # 2c) ...or shoot a named drill, which brings its own distance and target face
 python -m marksman.cli drill plan               # what to practise today
-python -m marksman.cli analyze --tool b1 --drill group-10 \
-    --shots "8,2  -6,4  1,-7  -3,5  4,1"        # prints the tier you earned
+python -m marksman.cli analyze --tool d1 --drill foam-group-5 \
+    --shots "80,20 -60,40 10,-70 -30,50 40,10"  # prints the tier you earned
 
 # 3) Track progress
 python -m marksman.cli progress                 # overall
 python -m marksman.cli progress --by-category
 python -m marksman.cli progress --by-tool
-python -m marksman.cli progress --tool b1 --sessions
+python -m marksman.cli progress --tool d1 --sessions
 python -m marksman.cli sessions                 # list every saved target
 python -m marksman.cli targets                  # built-in target faces
 
 # 3b) Print the face you are shooting at, at true size
-python -m marksman.cli targets --print "Airsoft Practice 10m" --distance 10
+python -m marksman.cli targets --print "Foam Practice 5m" --distance 5
 
 # 4) Pick a skin (see "Skins" below)
 python -m marksman.cli theme                    # list skins
@@ -260,8 +272,8 @@ python -m marksman.cli theme preview inferno    # try one on
 python -m marksman.cli theme set recon          # make it the default
 
 # 5) Save space: recreate results as diagrams, then delete bulky source media
-python -m marksman.cli render --tool b1       # redraw from stored shots
-python -m marksman.cli cleanup --tool b1      # dry run (add --apply to delete)
+python -m marksman.cli render --tool d1       # redraw from stored shots
+python -m marksman.cli cleanup --tool d1      # dry run (add --apply to delete)
 ```
 
 ## Analysing an image
@@ -458,23 +470,26 @@ with its own palette; pick whichever mood you like:
 
 | Skin | Palette / vibe |
 |---|---|
-| `mono` | A clean printed score card — no colour (the default). |
-| `recon` | Night-vision phosphor green & amber. |
-| `orbital` | Blue HUD with green and holographic amber. |
-| `inferno` | Molten blood-red and hellfire orange. |
-| `frontline` | Steel-blue smoke cut with dog-tag orange. |
-| `lightfall` | Deep purple lit by golden light. |
-| `pandora` | Bold comic yellow with inky outlines. |
-| `dust` | Desert sand versus a cool tactical blue. |
-| `overdrive` | Vibrant orange energy over bright cyan. |
-| `dropzone` | Crimson on gunmetal slate. |
-| `tropic` | Lush tropical teal under a sunset orange. |
+| `mono` | **Iron Sights** — A clean printed score card -- no colour, just the numbers (the default: no colour at all, so piped output stays plain) |
+| `foam` | **Foam Dart** — Safety orange and foam cream over a soft teal — the house style, worn by the desktop and phone apps |
+| `garden` | **Garden Skirmish** — Cut grass, sunshine and a bright dart streak |
+| `blockfort` | **Block Fort** — Cardboard walls, parcel tape and foam-tipped darts |
+| `recon` | **Glow Dark** — Glow-in-the-dark green under a warm amber |
+| `orbital` | **Orbital** — Blue HUD with green and holographic amber |
+| `inferno` | **Hot Streak** — A molten red run into bright orange |
+| `frontline` | **Sideline** — Team-jersey blue cut with a whistle orange |
+| `lightfall` | **Light & Dark** — Deep purple lit by golden light |
+| `pandora` | **Cel-Shade** — Bold comic yellow with inky outlines |
+| `dust` | **Sandlot** — Backyard sand against a cool pool blue |
+| `overdrive` | **Overdrive** — Vibrant orange energy over bright cyan |
+| `dropzone` | **Bunker** — Team red on cool concrete grey |
+| `tropic` | **Back Garden** — Lush green teal under a sunset orange |
 
 ```bash
 marksman theme                    # list skins (current one marked)
-marksman theme preview orbital    # see a skin without committing
-marksman theme set inferno        # save it as your default
-marksman --theme dust progress    # use a skin for just this run
+marksman theme preview foam       # see a skin without committing
+marksman theme set foam           # save it as your default
+marksman --theme garden progress  # use a skin for just this run
 marksman --no-color progress      # force plain output
 ```
 
@@ -543,7 +558,7 @@ from marksman.grouping import analyze_group
 from marksman.targets import get_target
 
 shots = [Shot(1.2, 3.4), Shot(-2.0, 5.1), Shot(0.5, -1.0)]
-stats = analyze_group(shots, target=get_target("Airsoft Practice 10m"))
+stats = analyze_group(shots, target=get_target("Foam Practice 5m"))
 print(stats.extreme_spread_mm, stats.total_score)
 ```
 
