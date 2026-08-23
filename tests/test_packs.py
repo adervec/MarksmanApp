@@ -144,18 +144,17 @@ class TestCeilingAndToggles(unittest.TestCase):
         self.assertIn("spicy", [p["id"] for p in packs.load(self.db)])
 
     def test_disabling_a_pack_removes_its_drills(self):
-        self.db.settings["packs"] = {"disabled": ["airsoft"]}
+        self.assertIn("foam-group-5", [d["id"] for d in drills.all_drills(self.db)])
+        self.db.settings["packs"] = {"disabled": ["foam"]}
         packs.reset()
-        ids = [d["id"] for d in drills.all_drills(self.db)]
-        self.assertNotIn("group-10", ids)
-        self.assertIn("foam-group-5", ids)
+        self.assertNotIn("foam-group-5", [d["id"] for d in drills.all_drills(self.db)])
 
     def test_a_broken_pack_does_not_stop_the_others(self):
         with open(os.path.join(self.tmp, "broken.json"), "w", encoding="utf-8") as fh:
             fh.write("{ not json at all")
         rows = {r["id"]: r for r in packs.status(self.db)}
-        self.assertIn("airsoft", rows)
-        self.assertTrue(rows["airsoft"]["active"])
+        self.assertIn("foam", rows)
+        self.assertTrue(rows["foam"]["active"])
         broken = [r for r in rows.values() if r.get("error")]
         self.assertEqual(len(broken), 1)
         self.assertFalse(broken[0]["active"])
@@ -168,10 +167,12 @@ class TestCeilingAndToggles(unittest.TestCase):
         self.assertFalse(rows["foam"]["bundled"])
 
     def test_terminology_only_applies_when_one_pack_is_active(self):
-        self.db.settings["packs"] = {"disabled": ["airsoft"]}
-        packs.reset()
+        # A stock install has exactly one pack, so the app speaks its language.
         self.assertEqual(packs.term("projectile", self.db), "dart")
-        self.db.settings["packs"] = {}
+        # Add a second and the vocabulary goes neutral again -- two packs
+        # disagree about what a projectile is called.
+        self._write(_copy(id="second", name="Second Pack", sensitivity=1,
+                          drills=[], targets=[]))
         packs.reset()
         self.assertEqual(packs.term("projectile", self.db), "projectile")
 

@@ -20,7 +20,7 @@ from marksman.targets import get_target
 from marksman import tracker, report
 
 
-FACE_MM = 400.0          # "Airsoft Practice 10m" face is ~400 mm across
+FACE_MM = 1000.0         # "Foam Practice 5m" face is 1000 mm across
 IMG_PX = 700             # rendered image width/height in pixels
 DOT_R = 4                # radius (px) of each red marker dot
 MM_PER_PX = FACE_MM / IMG_PX
@@ -76,15 +76,16 @@ def analyse_and_store(db, tool, date, shots_mm, target, path):
 def main():
     workdir = tempfile.mkdtemp(prefix="marksman_demo_")
     db = Database(path=os.path.join(workdir, "demo_data.json"))
-    tool = Tool(id="aeg1", name="Training AEG", category="AEG",
-                    projectile="6mm", is_powered=False, projectile_mm=6.0)
+    tool = Tool(id="d1", name="Garden Blaster", category="Flywheel",
+                    projectile="13mm foam dart", is_powered=True,
+                    projectile_mm=13.0)
     db.add_tool(tool)
-    target = get_target("Airsoft Practice 10m")
+    target = get_target("Foam Practice 5m")
 
-    # Session 1: a loose, high-right group (early days) -- ~70 mm, off-centre.
-    s1 = [(28, 42), (52, 21), (14, 63), (42, 49), (63, 31)]
-    # Session 2, weeks later: tighter (~40 mm) and well centred (improvement!).
-    s2 = [(0, 18), (18, 0), (0, -18), (-18, 0), (0, 0)]
+    # Session 1: a loose, high-right group (early days) -- ~280 mm, off-centre.
+    s1 = [(112, 168), (208, 84), (56, 252), (168, 196), (252, 124)]
+    # Session 2, weeks later: tighter (~160 mm) and well centred (improvement!).
+    s2 = [(0, 72), (72, 0), (0, -72), (-72, 0), (0, 0)]
 
     analyse_and_store(db, tool, "2026-03-01", s1, target,
                       os.path.join(workdir, "session1.png"))

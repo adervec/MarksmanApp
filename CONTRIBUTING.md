@@ -15,7 +15,8 @@ welcome. Please keep the following in mind.
 - **Keep plain output stable.** Colour/skins must remain off for non‑terminals,
   `NO_COLOR`, and `--no-color`, so piped/redirected output stays byte‑for‑byte
   plain. Tests rely on this.
-- **Mind the domain.** This project is informational only and about **airsoft**.
+- **Mind the domain.** This project is informational only, and what it ships
+  for is **foam dart blasters**; anything else arrives as a pack.
   Don't add content that presents itself as professional coaching, medical,
   safety, or legal advice, and don't weaken the existing disclaimers. See
   [DISCLAIMER.md](DISCLAIMER.md).

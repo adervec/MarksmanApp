@@ -16,8 +16,8 @@ Foam darts are what it ships for and what it looks like. Under that, the engine
 is deliberately **equipment-agnostic** — it knows about *tools* that launch
 *projectiles* at *target faces*, and nothing else. Drills, faces and vocabulary
 all come from [**equipment packs**](#equipment-packs), plain JSON files: foam
-dart blasters and airsoft are bundled, and you can write a pack for whatever
-you practise with. **You are responsible for what you install and for whether
+dart blasters is the one that ships enabled, airsoft comes with the repo as an
+optional install, and you can write a pack for whatever you practise with. **You are responsible for what you install and for whether
 it is legal and safe where you are.**
 
 > **Independent project.** Marksman is not affiliated with, sponsored by, or
@@ -350,17 +350,31 @@ are — lives in a **pack**: a plain JSON file the app reads at startup.
 
 ```bash
 marksman pack list             # what's installed, and what's loading
-marksman pack show airsoft     # drills, faces, categories, safety notes
+marksman pack show foam        # drills, faces, categories, safety notes
 marksman pack install ./my-pack.json
 marksman pack disable foam
 ```
 
-Two ship with the app, and they are ordinary packs with no special privileges:
+One ships enabled, and it is an ordinary pack with no special privileges:
 
 | Pack | Sensitivity | What's in it |
 |---|---|---|
 | **Foam Dart Blasters** | 1 · Toy | 6 drills, 2 faces, sized for how wide a foam dart actually spreads |
-| **Airsoft** | 2 · Sport | 12 drills, 3 faces, for AEGs, GBBs, spring, HPA and bolt-action |
+
+A stock install therefore speaks one vocabulary -- blasters and darts. The repo
+also carries an **Airsoft** pack (2 · Sport; 12 drills, 3 faces, for AEGs, GBBs,
+spring, HPA and bolt-action) which is *not* installed by default. If you want
+it:
+
+```bash
+marksman pack install packs/airsoft.json
+```
+
+It is not in the wheel either, so a PyPI install needs the file from
+[`packs/`](packs/) in this repo first.
+
+Install a second pack and the vocabulary goes back to neutral ("tool",
+"projectile"), because two packs no longer agree on what to call things.
 
 ### Writing your own
 

@@ -14,7 +14,7 @@ project. It records what's already been done and what's left to decide or do.
 |---|---|
 | License | **MIT** — permissive, attribution‑only, no warranty. Fits "share freely, not monetizing." |
 | Game‑franchise skin references | **Removed** the explicit "nods to \<Game\>" mapping from the README; kept original skin names + generic palette descriptions. |
-| Scope / domain | **Airsoft only.** Pivoted the whole app off real firearms: renamed the tracked item to "tool", swapped categories to airsoft types (AEG/GBB/spring/HPA), "caliber" → 6 mm BB, and ISSF/NRA faces → generic airsoft practice targets. |
+| Scope / domain | **Foam darts by default, packs for the rest.** Ships with the foam dart pack enabled; airsoft is an optional pack in `packs/`. Historically: Pivoted the whole app off real firearms: renamed the tracked item to "tool", swapped categories to airsoft types (AEG/GBB/spring/HPA), "caliber" → 6 mm BB, and ISSF/NRA faces → generic airsoft practice targets. |
 | Instructional guide | **Kept, stripped to platform‑neutral fundamentals** (sight picture, trigger, breathing, reading groups) with prominent disclaimers; all real‑gun technique, ammunition, and firearms law removed. |
 
 ## Done in this pass
