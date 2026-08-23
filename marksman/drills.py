@@ -201,21 +201,24 @@ if __name__ == "__main__":  # pragma: no cover - self-check
     from .models import Session, Shot, Tool
     from .grouping import analyze_group
 
-    d = get_drill("group-10")
-    assert tier_for(d, 200.0) is None
-    assert tier_for(d, 85.0) == "Rookie"
-    assert tier_for(d, 20.0) == "Marksman"
-    assert next_cutoff(d, "Rookie") == 60.0
-    assert next_cutoff(d, "Marksman") is None
+    # Derived from the drill's own cutoffs, so installing a different pack
+    # can't break the check that the tier maths works.
+    d = all_drills()[0]
+    easiest, hardest = d["cutoffs"][0], d["cutoffs"][-1]
+    assert tier_for(d, easiest * 2) is None                 # short of the ladder
+    assert tier_for(d, easiest) == TIERS[0]
+    assert tier_for(d, hardest / 2.0) == TIERS[-1]
+    assert next_cutoff(d, TIERS[0]) == d["cutoffs"][1]
+    assert next_cutoff(d, TIERS[-1]) is None
 
     db = Database()
     db.add_tool(Tool("t", "Test"))
     shots = [Shot(-20.0, 0.0), Shot(20.0, 0.0)]        # 40 mm spread -> Sharp
     db.add_session(Session("s1", "t", "2026-01-01", shots=shots,
                            stats=analyze_group(shots), distance_m=10.0,
-                           drill_id="group-10"))
+                           drill_id=d["id"]))
     row = standing(db, d)
-    assert row["attempts"] == 1 and row["tier"] == "Sharp", row
+    assert row["attempts"] == 1 and row["tier"] == TIERS[-1], row
     assert plan(db, 3)[0]["attempts"] == 0                # untried drills first
 
     # The engine holds no content: every drill came from a pack.
