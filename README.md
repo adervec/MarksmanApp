@@ -43,14 +43,40 @@ happens to be installed, JPEG and other formats work too.
 > not checked by it. Provided "as is", with no warranty. Full text:
 > **[DISCLAIMER.md](DISCLAIMER.md)**.
 
-## The desktop app
+## Get the app
+
+**[Open Marksman](https://adervec.github.io/MarksmanApp/)** — that link *is* the app. Nothing to install, no Python,
+no command line.
+
+Your browser will offer to install it (Chrome/Edge: the install icon in the
+address bar; iOS Safari: Share → Add to Home Screen). Installed, it gets its own
+window and icon and behaves like any other app — the same one on a desktop as on
+a phone.
+
+- **Works offline.** The engine is downloaded once, then cached. Sessions log
+  fine at a field with no signal.
+- **Your data stays on your device**, in that browser's storage. Nothing is
+  uploaded anywhere unless you turn on Google Drive sync yourself.
+- **It is the same Python** you'd run locally, compiled to WebAssembly — the
+  same grouping maths, the same drills, the same printable faces, covered by the
+  same test suite. Not a reimplementation that drifts.
+
+First visit downloads the Python runtime (a few MB, once). After that it starts
+from cache.
+
+> Because everything runs on your device, clearing that site's browser data
+> clears your sessions. **Export** (Sessions → Export JSON) or turn on Drive
+> sync if the history matters to you.
+
+## The desktop app (tkinter)
 
 ```bash
 marksman gui          # or: python -m marksman gui
 ```
 
-Eight tabs over the same data the CLI uses — tkinter, so it needs nothing
-installed:
+The original desktop app, kept for people already running it locally. If you
+just want Marksman on a desktop, **[install the app](https://adervec.github.io/MarksmanApp/)** instead — same UI as
+the phone, no Python. Eight tabs over the same data the CLI uses:
 
 | Tab | What's in it |
 |---|---|
@@ -65,13 +91,14 @@ installed:
 
 Every terminal **skin** has a matching desktop palette (**Skin** menu).
 
-## On your phone
+## The app itself
 
-The same data in any browser on your Wi-Fi — log shots at the field by
-**tapping them onto the target face**:
+This is the UI you get whether you [install the app](https://adervec.github.io/MarksmanApp/)
+or serve it from your own machine — one page, two backends. Log shots at the
+field by **tapping them onto the target face**:
 
 ```bash
-marksman web          # then open the printed URL on your phone
+marksman web          # serve it on your Wi-Fi instead, from your own data file
 ```
 
 <p>
@@ -90,9 +117,10 @@ library's `http.server` — still zero dependencies, and it works in a desktop
 browser too.
 
 **Add it to your home screen** and it opens like an app — its own icon, no
-browser chrome. The access code stays the same between runs so the icon keeps
-working; `marksman web --new-key` issues a fresh one and invalidates the old
-links.
+browser chrome. That is the whole story for the installed build; when you serve
+it yourself with `marksman web`, the access code stays the same between runs so
+the icon keeps working, and `marksman web --new-key` issues a fresh one and
+invalidates the old links.
 
 The header's orientation toggle (**auto / portrait / landscape**) locks the
 layout by *setting*, not by how the phone happens to be tilted — handy when
@@ -205,7 +233,11 @@ Ten families — `face`, `bulls`, `dots`, `squares`, `diamonds`, `grid`,
 `clock`, `ladder`, `lines`, `cards` — each at whatever size fits your paper.
 The phone app's Log tab has the same catalogue in its **Print** dropdown.
 
-## Install
+## Install the Python version
+
+Only needed if you want the CLI, the tkinter app, or to serve the web app to
+other devices on your Wi-Fi. For everyday use, **[the installable app](https://adervec.github.io/MarksmanApp/)**
+needs none of this.
 
 It runs straight from the source tree — no install needed. To get a `marksman`
 command on your PATH, pick one:

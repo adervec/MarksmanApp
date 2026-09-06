@@ -15,3 +15,6 @@ coach/
 demo_output.txt
 test_results.txt
 *.tmp
+
+# Built site (build_site.py)
+_site/

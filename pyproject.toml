@@ -57,7 +57,8 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 packages = ["marksman"]
 
-# The bundled equipment packs are data files, so they need saying so or they
-# won't make it into the wheel and the app would install with no drills.
+# The bundled equipment packs and the web app's page are data files, so they
+# need saying so or they won't make it into the wheel and the app would install
+# with no drills and no UI.
 [tool.setuptools.package-data]
-marksman = ["packs/*.json"]
+marksman = ["packs/*.json", "webapp/*"]
