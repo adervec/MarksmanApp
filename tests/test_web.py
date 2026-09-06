@@ -9,7 +9,7 @@ import unittest
 import urllib.error
 import urllib.request
 
-from marksman import imageio, web
+from marksman import imageio, web, webapi
 from marksman.grouping import analyze_group
 from marksman.models import Session, Shot, Tool
 from marksman.storage import Database
@@ -358,7 +358,7 @@ class TestWebExtras(TestWeb):
             self.assertEqual(srv2.token, first)
         finally:
             srv2.server_close()
-        bundle = web._bundle(Database.load(self.path))
+        bundle = webapi._bundle(Database.load(self.path))
         self.assertNotIn("web_key", bundle["settings"])
 
 

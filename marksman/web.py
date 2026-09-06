@@ -24,15 +24,13 @@ import socket
 import threading
 from http import cookies as http_cookies
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from urllib.parse import parse_qs, urlparse
 
-from . import exporter as exporter_mod
-from . import logo as logo_mod
 from . import packs as packs_mod
 from .storage import Database, DEFAULT_DB_PATH
-from .webapi import (DEFAULT_PORT, MAX_BODY, _Bad, _bundle, _icon_png,
-                     _state, dispatch, download)
+from .webapi import (DEFAULT_PORT, MAX_BODY, _Bad, _icon_png, _state,
+                     dispatch, download)
 
 WEBAPP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "webapp")
 
