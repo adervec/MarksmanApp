@@ -604,8 +604,8 @@ it before you trust a measurement taken against it.
 Released under the [MIT License](LICENSE) — free to use, modify, and
 redistribute with attribution, no warranty. © 2026 Adam Erik Eryavec. It is a
 non-commercial hobby project, and contributions are welcome — see
-[CONTRIBUTING.md](CONTRIBUTING.md) and the
-[Code of Conduct](CODE_OF_CONDUCT.md).
+[CONTRIBUTING.md](https://github.com/adervec/MarksmanApp/blob/main/CONTRIBUTING.md) and the
+[Code of Conduct](https://github.com/adervec/MarksmanApp/blob/main/CODE_OF_CONDUCT.md).
 
 ## Disclaimer
 
