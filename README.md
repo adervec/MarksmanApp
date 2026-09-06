@@ -591,9 +591,10 @@ it before you trust a measurement taken against it.
 ## License
 
 Released under the [MIT License](LICENSE) — free to use, modify, and
-redistribute with attribution, no warranty. © 2026 Adam Erik Eryavec. This is a
-non-commercial hobby project; see **[GOING_PUBLIC.md](GOING_PUBLIC.md)** for the
-public-release plan and checklist.
+redistribute with attribution, no warranty. © 2026 Adam Erik Eryavec. It is a
+non-commercial hobby project, and contributions are welcome — see
+[CONTRIBUTING.md](CONTRIBUTING.md) and the
+[Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Disclaimer
 
