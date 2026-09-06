@@ -1,0 +1,21 @@
+# GitHub Pages. The site is the README (rendered as the landing page) plus the
+# aiming notes in guide/ — everything else here is the app, not the site.
+title: Marksman
+description: >-
+  Foam dart marksmanship tracker: turn a photo of your target into precise
+  metrics, tiered drills and progress over time.
+theme: jekyll-theme-cayman
+
+# jekyll-relative-links (on by default for Pages) turns the README's links to
+# DISCLAIMER.md and friends into working links on the site.
+plugins:
+  - jekyll-relative-links
+
+exclude:
+  - marksman/
+  - tests/
+  - packs/
+  - demo.py
+  - install.ps1
+  - pyproject.toml
+  - run_tests.py

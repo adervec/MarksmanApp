@@ -3,17 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Airsoft Marksmanship — Fundamentals (Personal Notes)</title>
+<title>Foam Dart Marksmanship — Fundamentals (Personal Notes)</title>
 <style>
   :root{
-    --bg:#0e1116; --panel:#161b22; --line:#262d38; --ink:#e7edf3;
-    --muted:#9aa7b6; --accent:#46d160; --accent2:#ffb000; --warn:#ff9d2e;
+    --bg:#141821; --panel:#1b212c; --line:#2a3240; --ink:#f5ebda;
+    --muted:#9aa7b6; --accent:#ff7a29; --accent2:#2fc4b2; --warn:#ffd24a;
+    --foam:#f5ebda;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);line-height:1.65;
     font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;}
   .wrap{max-width:820px;margin:0 auto;padding:32px 20px 70px;}
   .mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;}
+  i.dart{display:inline-block;width:34px;height:9px;border-radius:5px;
+    vertical-align:middle;margin-right:9px;
+    background:linear-gradient(90deg,var(--accent) 0 36%,var(--foam) 36% 100%);}
   header.cover{border:1px solid var(--line);border-radius:12px;padding:24px;
     background:linear-gradient(160deg,#11161d,#0e1116);}
   .stamp{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.18em;
@@ -21,7 +25,7 @@
   h1{font-size:28px;margin:0 0 6px;line-height:1.15;}
   h1 span{color:var(--muted);font-weight:400;}
   .subtitle{color:var(--muted);margin:0;font-size:15px;}
-  aside.disc{margin:22px 0;padding:18px 20px;border:1px solid #5a3c14;
+  aside.disc{margin:22px 0;padding:18px 20px;border:1px solid #5a4a14;
     border-left:4px solid var(--warn);border-radius:10px;background:rgba(255,157,46,.07);
     font-size:14px;}
   aside.disc .h{font-family:ui-monospace,monospace;font-weight:700;letter-spacing:.06em;
@@ -58,10 +62,11 @@
 
 <header class="cover">
   <div class="stamp">PERSONAL NOTES · NOT PROFESSIONAL INSTRUCTION</div>
-  <h1>Airsoft Marksmanship<br><span>aiming fundamentals &amp; practice</span></h1>
+  <h1><i class="dart"></i>Foam Dart Marksmanship<br><span>aiming fundamentals &amp; practice</span></h1>
   <p class="subtitle">Platform‑neutral notes on accuracy — the things that hold true
-  whether you run an AEG, a gas blowback pistol, a spring sniper, or HPA. Pairs with
-  the Marksman app for tracking your groups over time.</p>
+  whether you shoot a springer, a flywheel blaster, a pump‑action, or a blowgun, and
+  mostly hold true for any aiming sport. Pairs with the
+  <a href="../">Marksman app</a> for tracking your groups over time.</p>
 </header>
 
 <aside class="disc">
@@ -70,12 +75,15 @@
   instruction.</strong> I'm a software developer — not a coach, instructor, doctor, or lawyer.
   Nothing here is professional coaching, medical, safety, or legal advice.</p>
   <ul>
-    <li><strong>Eye protection, always.</strong> A BB can cause permanent eye injury. Wear
-    ANSI‑rated (or better), properly sealed eyewear whenever any replica is in use, and keep it
-    on in every live area.</li>
-    <li><strong>Your field's rules win.</strong> Follow the marshals, your field's FPS/joule
-    limits and minimum engagement distances, and your local laws. If anything here conflicts
-    with them, follow them — not this.</li>
+    <li><strong>Eye protection, always.</strong> A foam dart can cause permanent eye injury —
+    "it's only foam" has cost people their sight. Wear ANSI‑rated (or better), properly sealed
+    eyewear whenever anything is being fired, and keep it on for everyone in the area, not just
+    the person shooting.</li>
+    <li><strong>Never aim at a person or animal</strong> who is not knowingly playing, and never
+    at the face. Know what is behind your target.</li>
+    <li><strong>The rules where you are win.</strong> Follow the house rules, the field
+    marshals, any velocity or engagement‑distance limits, and your local laws. If anything
+    here conflicts with them, follow them — not this.</li>
     <li><strong>Use at your own risk.</strong> See the project's <code>DISCLAIMER.md</code> for
     the full text.</li>
   </ul>
@@ -86,9 +94,9 @@
   <ol>
     <li><a href="#s1">How to use these notes</a></li>
     <li><a href="#s2">The fundamentals</a></li>
-    <li><a href="#s3">Sight picture, hop‑up &amp; trigger</a></li>
+    <li><a href="#s3">Sight picture, dart flight &amp; trigger</a></li>
     <li><a href="#s4">Reading your groups</a></li>
-    <li><a href="#s5">Dry practice (no BBs)</a></li>
+    <li><a href="#s5">Dry practice (no darts)</a></li>
     <li><a href="#s6">A simple practice loop</a></li>
     <li><a href="#s7">The mental game</a></li>
     <li><a href="#s8">Tracking it with Marksman</a></li>
@@ -98,15 +106,15 @@
 <section id="s1">
   <div class="sec-id">§ 01</div>
   <h2 class="section-title">How to use these notes</h2>
-  <p>Accuracy in airsoft comes from the same handful of fundamentals every aiming sport
-  shares: a stable platform, a consistent sight picture, and a clean trigger press, repeated
-  the same way every time. Hardware matters less than consistency — a tuned mid‑range replica
+  <p>Accuracy with a foam dart blaster comes from the same handful of fundamentals every
+  aiming sport shares: a stable platform, a consistent sight picture, and a clean trigger press,
+  repeated the same way every time. Hardware matters less than consistency — a cheap blaster
   in steady hands out‑shoots an expensive one in shaky hands.</p>
   <div class="callout">
     <div class="tag">▸ Two operating principles</div>
     <p style="margin:0 0 6px;"><strong>Dry practice builds skill.</strong> Most of your gains in
     trigger control and sight discipline come from slow, deliberate reps at home — see §5. Live
-    BBs are for <em>verifying</em> what you built, not for learning it.</p>
+    darts are for <em>verifying</em> what you built, not for learning it.</p>
     <p style="margin:0;"><strong>Slow is smooth, smooth is fast.</strong> Speed comes from
     removing wasted motion and bad reps, not from rushing. Build a perfect shot first; add speed
     only once each shot is still perfect.</p>
@@ -124,44 +132,53 @@
       shoulder‑width, weight slightly forward, relaxed but stable. The more repeatable your
       platform, the more repeatable your hits.</td></tr>
     <tr><td><strong>Grip / hold</strong></td><td>High and firm, the same way every time. With a
-      pistol, the support hand fills the gap and most of the steering pressure is front‑to‑back.
-      With a longer replica, get consistent cheek weld and shoulder contact.</td></tr>
+      one‑handed blaster, the support hand fills the gap and most of the steering pressure is
+      front‑to‑back. With a longer one, get consistent cheek weld and shoulder contact.</td></tr>
     <tr><td><strong>Sight picture</strong></td><td>Align the sights (or centre the dot), and put
       that on your aim point. With iron sights, your eye focuses on the <em>front</em> sight.</td></tr>
     <tr><td><strong>Trigger control</strong></td><td>A smooth, straight‑back press that doesn't
       disturb the sights. The shot should almost surprise you — no snatch, no flinch.</td></tr>
-    <tr><td><strong>Stability / breathing</strong></td><td>Settle the replica, let your breathing
+    <tr><td><strong>Stability / breathing</strong></td><td>Settle the blaster, let your breathing
       pause naturally, and release the shot in that calm window rather than fighting wobble.</td></tr>
     <tr><td><strong>Follow‑through</strong></td><td>Hold your position and sight picture for a beat
-      after the shot. Watch the BB's flight — it tells you about your hop and your aim.</td></tr>
+      after the shot. Watch the dart's flight — its arc tells you as much as the hole
+      does.</td></tr>
   </table>
 </section>
 
 <section id="s3">
   <div class="sec-id">§ 03</div>
-  <h2 class="section-title">Sight picture, hop‑up &amp; trigger</h2>
+  <h2 class="section-title">Sight picture, dart flight &amp; trigger</h2>
   <h3>Sight picture</h3>
   <p>With irons, line up the front and rear sights level and evenly spaced, focus on the front
   sight, and let the target blur slightly. With a red dot, keep both eyes open and simply place
   the dot. The key is <em>the same picture every shot</em> — inconsistency here shows up as a
   group that wanders.</p>
-  <h3>Hop‑up — airsoft's extra variable</h3>
-  <p>Hop‑up puts backspin on the BB so it flies flatter and further. It is the biggest driver of
-  <em>vertical</em> point of impact in airsoft:</p>
+  <h3>Dart flight — the extra variable</h3>
+  <p>A foam dart is light, slow and blunt, so it arcs far more than most projectiles and it is
+  far more sensitive to the state of the dart itself. Most of your <em>vertical</em> spread is
+  flight, not technique:</p>
   <ul>
-    <li>Too little hop → BBs drop early (group prints low at distance).</li>
-    <li>Too much hop → BBs climb/loft (group prints high, then dives).</li>
-    <li>Tune it so a BB flies flat and level to your practice distance, then leave it alone while
-      you work on fundamentals.</li>
+    <li><strong>Hold over, don't chase it.</strong> Few blasters have adjustable sights, and the
+      drop at 10 m is large. Pick an aim point that puts the group where you want it and use the
+      same one every time — that is your zero.</li>
+    <li><strong>Tired darts fly badly.</strong> A crushed, split or wet head flies wide and
+      nothing you do with your trigger finger will fix it. Retire darts as they deform.</li>
+    <li><strong>One kind of dart per session.</strong> Different lengths, weights and head
+      hardnesses land differently. Mixing them measures your darts, not you.</li>
+    <li><strong>Flywheels need a warm‑up and a rest.</strong> Velocity drifts with battery
+      charge and motor temperature; springers are more repeatable shot to shot. Either way, let
+      the blaster settle into a steady state before the group that counts.</li>
   </ul>
-  <p>Match your BB weight to your setup (heavier BBs are more stable in wind but need appropriate
-  hop and power). Keep BB weight consistent within a session so you're measuring <em>you</em>,
-  not the BBs.</p>
+  <p>Indoors, none of this moves much. Outdoors, a dart this light is pushed around by wind you
+  can barely feel — if the group opens up outdoors, suspect the air before you suspect
+  yourself.</p>
   <h3>Trigger</h3>
-  <p>Press straight back, smoothly, without disturbing the sights. A gas blowback has a definite
-  break to find and respect; an electric trigger is more of a switch, so the discipline is
-  keeping everything else still as you press. Either way: isolate the trigger finger and don't
-  let the hand sympathetically squeeze.</p>
+  <p>Press straight back, smoothly, without disturbing the sights. A springer has a heavy,
+  definite break to find and respect; a flywheel trigger is more of a switch, so the discipline
+  is keeping everything else still as you press. Either way: isolate the trigger finger and
+  don't let the hand sympathetically squeeze. A heavy trigger punishes a poor grip more than a
+  light one does — that is a feature when you are learning.</p>
 </section>
 
 <section id="s4">
@@ -171,16 +188,22 @@
   (precision), and <strong>where</strong> is it centred (zero)?</p>
   <table>
     <tr><th>What you see</th><th>Likely cause</th><th>Fix</th></tr>
-    <tr><td>Tight group, but off‑centre</td><td>Aim / sight / hop zero, not technique</td>
-      <td>Adjust sights or aim point; tune hop for vertical. Your fundamentals are working.</td></tr>
+    <tr><td>Tight group, but off‑centre</td><td>Your zero — aim point or sights, not technique</td>
+      <td>Move the aim point (or the sights, if you have them) and keep everything else. Your
+      fundamentals are working.</td></tr>
     <tr><td>Centred but scattered</td><td>Consistency: grip, trigger, or platform varying shot to shot</td>
       <td>Slow down; rebuild one fundamental at a time (§5).</td></tr>
-    <tr><td>Stringing low</td><td>Often anticipating the shot, or too little hop at distance</td>
-      <td>Dry‑practice the trigger; re‑check hop.</td></tr>
-    <tr><td>Stringing high / lofting</td><td>Frequently too much hop</td>
-      <td>Back the hop off until flight is flat.</td></tr>
-    <tr><td>Horizontal spread</td><td>Grip pressure or trigger pushing left/right</td>
-      <td>Even out grip; press the trigger straight back.</td></tr>
+    <tr><td>Stringing low</td><td>Anticipating the shot, or simply drop — darts fall fast</td>
+      <td>Dry‑practice the trigger; if every shot is low, it is your hold‑over, not you.</td></tr>
+    <tr><td>Vertical spread, same aim point</td><td>Velocity varying: battery sagging, flywheels
+      not up to speed, or darts in mixed condition</td>
+      <td>Recharge, let it spin up, and shoot one consistent set of darts.</td></tr>
+    <tr><td>Horizontal spread</td><td>Grip pressure or trigger pushing left/right — or wind,
+      outdoors</td>
+      <td>Even out grip; press the trigger straight back. Retest indoors to rule the air
+      out.</td></tr>
+    <tr><td>One flier, rest tight</td><td>Usually a bad dart, not a bad shot</td>
+      <td>Check that dart. Don't rebuild your technique around one hole.</td></tr>
   </table>
   <div class="callout">
     <div class="tag">▸ Measure, don't guess</div>
@@ -192,13 +215,14 @@
 
 <section id="s5">
   <div class="sec-id">§ 05</div>
-  <h2 class="section-title">Dry practice (no BBs)</h2>
+  <h2 class="section-title">Dry practice (no darts)</h2>
   <p>The cheapest, highest‑value practice there is: building perfect reps with no projectile in
   play. Do it safely.</p>
   <ul>
-    <li><strong>Make it safe first.</strong> Remove the magazine and any gas/battery as
-    appropriate for your replica, clear it, and point it at a safe backstop. Confirm it cannot
-    fire. (Check your replica's manual — some gas guns shouldn't be dry‑fired without gas.)</li>
+    <li><strong>Make it safe first.</strong> Remove the magazine and the battery, clear the
+    chamber, and point it at a safe backstop. Confirm it cannot fire. (Check the manual — some
+    blasters shouldn't be dry‑fired at all, and springers in particular can be damaged by
+    it.)</li>
     <li><strong>Aim &amp; hold.</strong> Build a perfect sight picture and hold it steady for a
     slow count; watch how little the sights move.</li>
     <li><strong>Trigger reps.</strong> Press straight back and watch the sights at the "break."
@@ -211,20 +235,22 @@
 <section id="s6">
   <div class="sec-id">§ 06</div>
   <h2 class="section-title">A simple practice loop</h2>
-  <p>A repeatable session structure so each range/garden trip actually moves a number:</p>
+  <p>A repeatable session structure so each garden or hallway session actually moves a
+  number:</p>
   <ol>
-    <li><strong>Warm up</strong> — a few relaxed shots to settle in; check eye pro and that hop
-    is where you left it.</li>
+    <li><strong>Warm up</strong> — a few relaxed shots to settle in; check eye protection, and
+    let a flywheel blaster and its battery reach a steady state.</li>
     <li><strong>Pick one focus</strong> — e.g. trigger control, or grip consistency. Just one.</li>
-    <li><strong>Shoot a measured group</strong> — a fixed number of BBs at a fixed distance on a
-    clean face, slow and deliberate.</li>
+    <li><strong>Shoot a measured group</strong> — a fixed number of darts at a fixed distance on
+    a clean face, slow and deliberate.</li>
     <li><strong>Log it</strong> — photograph and record it in Marksman so the group size and zero
     are captured.</li>
     <li><strong>Review</strong> — read the group (§4), note one thing to improve, and stop while
     it's still good.</li>
   </ol>
-  <p>Keep the distance, target, and BB weight consistent across sessions so the trend line means
-  something.</p>
+  <p>Keep the distance, the target face, and the darts consistent across sessions so the trend
+  line means something. Change one of those and you have started a new experiment, not continued
+  the old one.</p>
 </section>
 
 <section id="s7">
@@ -247,9 +273,12 @@
   <h2 class="section-title">Tracking it with Marksman</h2>
   <p>The whole point of measuring is to see the trend. A quick workflow:</p>
   <ol>
-    <li>Register your replica once: <code>marksman tool add --name "My AEG" --category AEG --bb-mm 6.0</code></li>
+    <li>Register your blaster once:
+      <code>marksman tool add --name "My Blaster" --category Flywheel --projectile "13mm foam dart" --projectile-mm 13</code></li>
+    <li>Print something to shoot at, at true physical size:
+      <code>marksman targets --print "Foam Practice 5m" --distance 5</code>.</li>
     <li>After a group, photograph the face with each hit marked, then analyse it:
-      <code>marksman analyze --tool &lt;id&gt; --target "Airsoft Practice 10m" --distance 10 --image shot.png</code>
+      <code>marksman analyze --tool &lt;id&gt; --target "Foam Practice 5m" --distance 5 --image shot.png</code>
       (or type coordinates with <code>--shots</code>).</li>
     <li>Watch progress over time: <code>marksman progress --tool &lt;id&gt; --sessions</code>.</li>
   </ol>
@@ -258,9 +287,10 @@
 </section>
 
 <footer>
-  Personal notes for airsoft target practice. Not professional instruction, medical, safety, or
-  legal advice. Wear eye protection, follow your field's rules and local laws, and use at your own
-  risk. See <code>DISCLAIMER.md</code>.
+  Personal notes for foam dart target practice. Not professional instruction, medical, safety,
+  or legal advice. Wear eye protection, never aim at anyone who isn't knowingly playing, follow
+  the rules of wherever you are shooting and your local laws, and use at your own risk. See the
+  project's <a href="https://github.com/adervec/MarksmanApp/blob/main/DISCLAIMER.md">DISCLAIMER.md</a> for the full text.
 </footer>
 
 </div>

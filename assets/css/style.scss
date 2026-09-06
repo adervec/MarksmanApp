@@ -1,0 +1,23 @@
+---
+---
+
+@import "{{ site.theme }}";
+
+/* Cayman ships green. Marksman is foam: safety orange over deep ink,
+   the same palette the desktop, web and printed pages use. */
+.page-header {
+  background-color: #ff7a29;
+  background-image: linear-gradient(120deg, #141821 0%, #b34a12 55%, #ff7a29 100%);
+}
+
+.btn {
+  color: #f5ebda;
+  border-color: rgba(245, 235, 218, 0.4);
+  &:hover { border-color: rgba(245, 235, 218, 0.85); background-color: rgba(245, 235, 218, 0.12); }
+}
+
+.main-content {
+  h1, h2 { color: #1b212c; }
+  a { color: #b34a12; }
+  blockquote { color: #4a5462; border-left-color: #ff7a29; }
+}

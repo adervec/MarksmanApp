@@ -57,7 +57,20 @@ properly rated eye protection**, never point anything at a person or animal
 outside a consenting, controlled activity, and treat everything as capable of
 firing.
 
-For **airsoft** specifically — replicas are not toys, and a BB can cause
+For **foam darts** — the equipment this ships for — "it's only foam" is how
+people lose an eye:
+
+- **Always wear properly rated, sealed eye protection**, and put it on everyone
+  in the area, not just whoever is shooting.
+- **Never aim at a person or animal** who is not knowingly taking part, and
+  never at the face, even in play.
+- Retire split or crushed darts, and never fire anything the blaster was not
+  made to fire — a modified blaster or an improvised projectile is a different
+  and far more dangerous thing.
+- Blasters are still not toys in every setting: keep them out of public view
+  and follow any local rules on how they look and are carried.
+
+If you **install the airsoft pack** — replicas are not toys, and a BB can cause
 serious, permanent eye injury:
 
 - **Always wear ANSI‑rated (or better), properly sealed eye protection** while
@@ -97,7 +110,7 @@ faces are practice targets, not sanctioned competition targets.
 
 Where the app suggests moving a sight, it is arithmetic on the group you gave
 it and the click value you typed in — nothing more. It does not know your
-equipment, your mounts, your hop-up, your rest or the conditions, cannot tell a
+equipment, your mounts, your rest, your projectiles or the conditions, cannot tell a
 sighting error from a technique error, and is **not** instruction on adjusting,
 modifying or servicing anything. Follow your equipment's own documentation and
 the people who taught you.

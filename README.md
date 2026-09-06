@@ -153,15 +153,15 @@ and MOA once it knows the distance. Give a tool the click value written on its
 turret and it counts the clicks for you:
 
 ```bash
-marksman tool add --id r1 --name "Scoped rifle" --click 1/4moa    # or 0.1mrad
+marksman tool add --id r1 --name "Sighted blaster" --click 1/4moa  # or 0.1mrad
 marksman tool set --id r1 --click 0.1mrad     # change it later; '' clears it
 marksman analyze --tool r1 --distance 10 --shots "12,8 14,10 13,6"
 #   Sight correction  : Move the group 18 clicks left and 11 clicks down at 10 m
 ```
 
 It is arithmetic on your own group, not coaching: it assumes the sight moves the
-group the way its markings say, and it cannot know about hop-up, canted mounts
-or a bad rest. Tools without an adjustable sight simply leave `--click` off and
+group the way its markings say, and it cannot know about a canted mount, a bad
+rest, or how your projectile actually flies. Tools without an adjustable sight simply leave `--click` off and
 get millimetres and angles.
 
 ## Printing a target
@@ -320,12 +320,12 @@ attempt sets the tier, so a bad day never demotes you.
 
 ```bash
 marksman drill                       # the catalogue + your tier on each
-marksman drill --family Positional   # one family
-marksman drill show hopup-ladder     # why, how to run it, cues, standards
+marksman drill --family Precision    # one family
+marksman drill show foam-distance-8  # why, how to run it, cues, standards
 marksman drill plan                  # what to practise today, and why
 
 # Log an attempt -- the drill supplies the distance and target face
-marksman analyze --tool b1 --drill group-10 --shots "8,2 -6,4 1,-7 -3,5 4,1"
+marksman analyze --tool b1 --drill foam-group-5 --shots "8,2 -6,4 1,-7 -3,5 4,1"
 ```
 
 The drills themselves come from whichever **equipment packs** you have installed
@@ -371,7 +371,7 @@ marksman pack install packs/airsoft.json
 ```
 
 It is not in the wheel either, so a PyPI install needs the file from
-[`packs/`](packs/) in this repo first.
+[`packs/`](https://github.com/adervec/MarksmanApp/tree/main/packs) in this repo first.
 
 Install a second pack and the vocabulary goes back to neutral ("tool",
 "projectile"), because two packs no longer agree on what to call things.
@@ -575,6 +575,17 @@ shots = [Shot(1.2, 3.4), Shot(-2.0, 5.1), Shot(0.5, -1.0)]
 stats = analyze_group(shots, target=get_target("Foam Practice 5m"))
 print(stats.extreme_spread_mm, stats.total_score)
 ```
+
+## The aiming notes
+
+The repo carries a short set of **[aiming notes](https://adervec.github.io/MarksmanApp/guide/)** — platform‑neutral
+fundamentals (stance, sight picture, trigger, reading a group, dry practice) plus
+the parts specific to foam: hold‑over, dart condition, and why a flywheel blaster
+needs a warm‑up before the group that counts. Read them at
+**<https://adervec.github.io/MarksmanApp/guide/>**.
+
+They are one hobbyist's personal notes, not instruction — the file says so at the
+top and means it.
 
 ## Scope & accuracy
 
