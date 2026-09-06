@@ -136,6 +136,22 @@
   const WRITES = new Set(["/api/session", "/api/tool", "/api/sync", "/api/goal",
                           "/api/session/delete"]);
 
+  // Phone cameras produce JPEG, and the stdlib decoder only reads PNG. Pillow
+  // is a megabyte, so it loads the first time someone actually analyses a
+  // photo rather than on every visit.
+  let pillow = null;
+  function needPillow() {
+    if (!pillow) {
+      status("Getting ready to read photos (once).");
+      pillow = py.loadPackage("pillow").then(done, err => {
+        pillow = null;                 // let the next photo try again
+        done();
+        throw err;
+      });
+    }
+    return pillow;
+  }
+
   function unwrap(raw) {
     const out = JSON.parse(raw);
     if (!out.ok) throw new Error(out.error);
@@ -158,6 +174,7 @@
 
     async api(path, body) {
       await ready;
+      if (path === "/api/analyze-image") await needPillow();
       const out = unwrap(py.globals.get("_call")(path, body ? JSON.stringify(body) : ""));
       if (WRITES.has(path)) await syncfs(false);
       return out.data;

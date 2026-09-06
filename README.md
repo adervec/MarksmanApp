@@ -311,7 +311,14 @@ python -m marksman.cli cleanup --tool d1      # dry run (add --apply to delete)
 ## Analysing an image
 
 Mark each hit on the target (a coloured pen dot or ring around each impact is
-the most reliable). Then:
+the most reliable).
+
+**In the app:** Log → **Photo of the target**, pick the shot from your camera
+roll, and the hits land on the target face for you to correct before saving.
+JPEG works too — the first photo you analyse pulls in an image decoder (about a
+megabyte, once).
+
+**From the CLI**, the same detector with the knobs exposed:
 
 * **Detection** — `--mode marker` finds the coloured marks (`--color
   red|green|blue|orange|purple|yellow`, or `--rgb r,g,b`). `--mode holes`
