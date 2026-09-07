@@ -122,11 +122,21 @@ nav button{font-size:13px}
   <h2>Recent</h2><div id="recent" class="card"></div>
   <h2>Equipment packs</h2><div id="packs" class="card"></div>
   <div id="safety"></div>
+  <h2>Coach</h2>
+  <div class="card">
+    <div class="muted">Hand your sessions, tiers and goals to an agent through a folder on this
+      device — CoworkSyncHub, Claude Desktop, or a person — and its reply shows here. Nothing is
+      uploaded.</div>
+    <div id="coachHost" style="margin-top:8px"></div>
+    <div id="coachReply" class="muted" style="display:none;white-space:pre-wrap;margin-top:10px"></div>
+  </div>
   <p class="muted" style="margin:14px 4px 4px">Marksman is a hobby project by a
     software developer — not a coach, instructor, doctor or lawyer. It computes
     metrics for personal progress tracking only. Tiers are practice standards
     set by whoever wrote the pack, not an official classification. Obey your
     local laws and handle whatever you own safely.</p>
+  <div class="linkrow"><a href="https://adervec.github.io/portal/" target="_blank"
+    rel="noopener">More apps by this maker</a></div>
 </section>
 
 <section id="drills"><div id="drillList"></div></section>
@@ -279,6 +289,16 @@ let S = null, shots = [], lastStats = null, curTarget = null;
 // Set when the shots on the canvas came from a Drive photo, so the saved
 // session remembers which photo it was and the picker can grey it out.
 let driveSource = null;
+
+// Let the maker's app portal know (same-origin localStorage) that this app is installed.
+try {
+  const DM = ["standalone", "minimal-ui", "fullscreen", "window-controls-overlay"];
+  if (navigator.standalone || DM.some(m => matchMedia("(display-mode: " + m + ")").matches)) {
+    const k = "portal-installed", reg = JSON.parse(localStorage.getItem(k) || "{}");
+    reg["MarksmanApp"] = Date.now();
+    localStorage.setItem(k, JSON.stringify(reg));
+  }
+} catch (e) { /* private mode - ignore */ }
 
 function el(tag, cls, text){
   const n = document.createElement(tag);
@@ -746,6 +766,7 @@ $("save").onclick = async () => {
       date: $("date").value, notes: $("notes").value, shots: shots,
       source_ref: driveSource ? "drive:" + driveSource.id : "",
     });
+    portalActivity(shots.length);
     if (r.drill) {
       toast(r.drill + ": " + fmt(r.value) + " " + r.unit + " — "
             + (r.attemptTier || "below Rookie") + (r.tier ? " (standing: " + r.tier + ")" : ""));
@@ -1041,6 +1062,108 @@ async function driveOpen(f){
     if (!isNaN(d)) $("date").value = d.toLocaleDateString("en-CA");
   } catch (e) { $("dMsg").textContent = e.message; }
 }
+
+// The maker portal's character sheet counts a session as one bout of aim practice
+// (amount is roughly minutes/10, and a session of shots is about that).
+function portalActivity(shotCount){
+  try {
+    const k = "portal-activity", a = JSON.parse(localStorage.getItem(k) || "[]");
+    a.push([Math.round(Date.now() / 1000), "MarksmanApp", "aim",
+            Math.max(1, Math.round(shotCount / 10))]);
+    localStorage.setItem(k, JSON.stringify(a.slice(-2000)));
+  } catch (e) { /* quota - ignore */ }
+}
+
+// Folder cowork through the maker's shared panel (https://adervec.github.io/cowork.js, fs mode):
+// the panel drives a folder you pick; we write the stats as coach/request.json and show whatever
+// an agent writes back to coach/reply.json. Same idea as the Drive loader above: inject, never
+// block the page if it will not load.
+function loadCowork(){
+  if (window.cowork) return Promise.resolve(window.cowork);
+  const head = document.head || document.documentElement;
+  if (!head || typeof head.appendChild !== "function") return Promise.resolve(null);
+  return new Promise(res => {
+    try {
+      const s = document.createElement("script");
+      s.src = "https://adervec.github.io/cowork.js";
+      s.async = true;
+      s.onload = () => res(window.cowork || null);
+      s.onerror = () => res(null);
+      head.appendChild(s);
+    } catch (e) { res(null); }
+  });
+}
+function coachHash(text){
+  let h = 5381;
+  for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0;
+  return h.toString(16);
+}
+const COACH_INSTRUCTIONS = [
+  "# Marksman - coach channel",
+  "",
+  "Recreational foam-dart target practice. Read `coach/request.json`:",
+  "",
+  "- `payload.tiers` - practice-standard tiers earned out of possible, and drills attempted.",
+  "- `payload.plan` - what the app is suggesting next, and why.",
+  "- `payload.goals` - the goals set, whether met, and the best value so far.",
+  "- `payload.recent` - the last 30 sessions: date, tool, drill, shot count, group size in mm",
+  "  and mrad, score percent.",
+  "",
+  "Write `coach/reply.json`:",
+  "",
+  "```json",
+  "{ \"requestHash\": \"<copy the request's requestHash verbatim>\",",
+  "  \"reply\": \"<short, specific coaching in markdown: which metric is the bottleneck, which",
+  "  drill to run next and why, one thing that is clearly improving. Encouraging, no lectures.>\" }",
+  "```",
+  "",
+  "Groups are measured centre to centre; smaller is better. Tiers are practice standards set by",
+  "whoever wrote the equipment pack, not an official classification. Coach the practice only -",
+  "no equipment-purchase advice, and nothing about anything but foam darts on paper targets."
+].join("\n");
+let coachMounted = false;
+function mountCoach(){
+  const host = $("coachHost"), out = $("coachReply");
+  if (!host || coachMounted) return;
+  coachMounted = true;
+  const show = text => { out.textContent = text || ""; out.style.display = text ? "block" : "none"; };
+  try { show(localStorage.getItem("mk-coach-reply") || ""); } catch (e) { /* private mode */ }
+  loadCowork().then(cw => {
+    if (!cw || host.childElementCount) return;
+    cw.mount(host, {
+      app: "marksman",
+      manifest: {protocol: "cowork-manifest", protocolVersion: 1, app: "marksman",
+        channels: [{name: "coach", request: ["coach/request.json"],
+                    instructions: "coach/INSTRUCTIONS.md", replyPath: "coach/reply.json"}]},
+      files: () => {
+        const st = S || {};
+        const payload = {
+          tiers: st.tierPoints || null,
+          plan: (st.plan || []).map(d => ({name: d.name, reason: d.reason, tier: d.tier})),
+          goals: (st.goals || []).map(g => ({metric: g.metric, target: g.target, unit: g.unit,
+            scope: g.scope, lowerIsBetter: g.lowerIsBetter, met: g.met, best: g.best})),
+          recent: (st.sessions || []).slice(0, 30).map(s => ({date: s.date, tool: s.tool,
+            drill: s.drill, shots: s.shots, group_mm: s.group_mm, group_mrad: s.group_mrad,
+            score_pct: s.score_pct})),
+        };
+        return {
+          "coach/request.json": {protocol: "marksman-coach", protocolVersion: 1,
+            kind: "coach-request", generatedAt: new Date().toISOString(),
+            requestHash: coachHash(JSON.stringify(payload)), payload: payload},
+          "coach/INSTRUCTIONS.md": COACH_INSTRUCTIONS,
+        };
+      },
+      apply: (ch, reply) => {
+        const text = typeof reply === "string" ? reply
+          : (reply && (reply.reply || (reply.payload && reply.payload.reply)))
+            || JSON.stringify(reply, null, 2);
+        try { localStorage.setItem("mk-coach-reply", text); } catch (e) { /* quota */ }
+        show(text);
+      },
+    });
+  });
+}
+mountCoach();
 
 function showFromHash(){
   const t = location.hash.slice(1);
