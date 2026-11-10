@@ -105,6 +105,20 @@ class TestWeb(unittest.TestCase):
         for needle in (b'id="orient"', b"mk_orient", b"rotcw", b"rotccw"):
             self.assertIn(needle, raw)
 
+    def test_drive_account_shows_the_google_profile_picture(self):
+        # House standard: the picture sits beside the name when Drive is linked.
+        _, raw = self._call("/")
+        for needle in (
+            b"acctPic = j.picture",                              # kept from userinfo
+            b'setAttribute("referrerpolicy", "no-referrer")',    # no page address to Google
+            b"acctPic = null",                                   # cleared on sign-out
+        ):
+            self.assertIn(needle, raw)
+        # Nothing extra when there is no picture, and no broken icon when the
+        # URL will not load.
+        self.assertIn(b"if (acctPic) {", raw)
+        self.assertIn(b"img.onerror", raw)
+
     def test_page_uses_the_house_font(self):
         # Atkinson Hyperlegible by default via the shared font.js, with a reader-facing picker.
         _, raw = self._call("/")
