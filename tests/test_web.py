@@ -138,6 +138,31 @@ class TestWeb(unittest.TestCase):
         _, raw = self._call("/")
         self.assertIn(b'<meta name="app-version" content=', raw)
 
+    def test_whats_new_is_declared_and_served(self):
+        # House standard: user-visible changes appear once after an update, so
+        # the page declares the file AND the file has to be reachable -- a meta
+        # pointing at a 404 is the failure this guards.
+        _, raw = self._call("/")
+        self.assertIn(b'<meta name="app-whatsnew" content="whatsnew.json">', raw)
+        status, body = self._call("/whatsnew.json")
+        self.assertEqual(status, 200)
+        entries = json.loads(body.decode("utf-8"))
+        self.assertTrue(entries, "whatsnew.json is empty")
+        dates = [e["date"] for e in entries]
+        self.assertEqual(dates, sorted(dates, reverse=True), "newest first")
+        for entry in entries:
+            self.assertEqual(set(entry), {"date", "items"})
+            self.assertTrue(entry["items"])
+            # Written for the shooter: dates are plain YYYY-MM-DD, not commits.
+            self.assertRegex(entry["date"], r"^\d{4}-\d{2}-\d{2}$")
+
+    def test_about_panel_has_something_to_show(self):
+        # font.js fills About from these; left out, the panel is half empty.
+        _, raw = self._call("/")
+        for name in (b"app-name", b"app-version", b"app-whatsnew",
+                     b"app-license", b"app-source", b"app-data-note"):
+            self.assertIn(b'<meta name="' + name + b'"', raw)
+
     def test_page_uses_the_house_font(self):
         # Atkinson Hyperlegible by default via the shared font.js, with a reader-facing picker.
         _, raw = self._call("/")

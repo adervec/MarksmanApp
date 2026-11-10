@@ -93,6 +93,10 @@ def main() -> int:
         with open(os.path.join(OUT, name), "w", encoding="utf-8", newline="\n") as fh:
             fh.write(text.replace("__BUILD__", build))
 
+    # What's new rides along beside the page it belongs to.
+    shutil.copy2(os.path.join(ROOT, "marksman", "webapp", "whatsnew.json"),
+                 os.path.join(OUT, "whatsnew.json"))
+
     files = _zip_package(os.path.join(OUT, "marksman.zip"))
     _icons()
     shutil.copytree(os.path.join(ROOT, "guide"), os.path.join(OUT, "guide"))
@@ -100,7 +104,8 @@ def main() -> int:
     # A page that cannot reach its engine is a blank screen, so fail the build
     # here rather than in someone's browser.
     for need in ("index.html", "boot.js", "sw.js", "manifest.webmanifest",
-                 "marksman.zip", "icon-192.png", "icon-512.png", "guide/index.html"):
+                 "marksman.zip", "icon-192.png", "icon-512.png", "whatsnew.json",
+                 "guide/index.html"):
         path = os.path.join(OUT, need)
         if not os.path.isfile(path) or os.path.getsize(path) == 0:
             print("build failed: %s is missing or empty" % need)

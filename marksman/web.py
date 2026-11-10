@@ -79,6 +79,12 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, _webapp_file("boot.js"), "text/javascript; charset=utf-8",
                        [("Cache-Control", "max-age=86400")])
             return
+        if path == "/whatsnew.json":
+            # Declared by <meta app-whatsnew>; no user data in a changelog.
+            self._send(200, _webapp_file("whatsnew.json"),
+                       "application/json; charset=utf-8",
+                       [("Cache-Control", "max-age=86400")])
+            return
         if path == "/icon.png":
             # No user data in a logo, and the manifest fetches it without
             # credentials -- so this one is open.

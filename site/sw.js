@@ -8,7 +8,8 @@ const BUILD = "__BUILD__";
 const SHELL = "marksman-shell-" + BUILD;
 const RUNTIME = "marksman-runtime-v0.28.2";
 const ASSETS = ["./", "index.html", "boot.js", "manifest.webmanifest",
-                "icon.png", "icon-192.png", "icon-512.png", "marksman.zip"];
+                "icon.png", "icon-192.png", "icon-512.png", "marksman.zip",
+                "whatsnew.json"];
 
 // cache:"reload" matters: GitHub Pages serves HTML with max-age=600, so a
 // plain addAll would happily cache the copy the browser already had and a
