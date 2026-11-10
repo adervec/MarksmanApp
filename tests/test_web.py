@@ -105,6 +105,12 @@ class TestWeb(unittest.TestCase):
         for needle in (b'id="orient"', b"mk_orient", b"rotcw", b"rotccw"):
             self.assertIn(needle, raw)
 
+    def test_page_uses_the_house_font(self):
+        # Atkinson Hyperlegible by default via the shared font.js, with a reader-facing picker.
+        _, raw = self._call("/")
+        for needle in (b'src="https://adervec.github.io/font.js"', b"var(--app-font,", b"<app-font-picker>"):
+            self.assertIn(needle, raw)
+
     def test_state(self):
         status, s = self._json("/api/state")
         self.assertEqual(status, 200)

@@ -13,6 +13,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Marksman">
 <title>Marksman</title>
+<!-- house font: Atkinson Hyperlegible by default, reader-changeable (see the Font card) -->
+<script src="https://adervec.github.io/font.js"></script>
 <script src="boot.js"></script>
 <style>
 :root{--bg:#141821;--card:#1d2430;--line:#2f3a49;--fg:#f2ece1;--mut:#95a0af;
@@ -20,7 +22,7 @@
       --good:#2fc4b2;--bad:#ff5c5c;--field:#151b24}
 *{box-sizing:border-box;margin:0}
 body{background:var(--bg);color:var(--fg);
-     font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+     font:16px/1.45 var(--app-font,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif)}
 #scroll{padding-bottom:70px}
 /* Orientation forced by the user's setting, not the accelerometer: when the
    device disagrees, the whole app is rotated 90 degrees via CSS. */
@@ -130,6 +132,9 @@ nav button{font-size:13px}
     <div id="coachHost" style="margin-top:8px"></div>
     <div id="coachReply" class="muted" style="display:none;white-space:pre-wrap;margin-top:10px"></div>
   </div>
+  <h2>Font</h2>
+  <div class="card"><app-font-picker></app-font-picker>
+    <div class="muted" style="margin-top:6px">Applies to every app by this maker on this device.</div></div>
   <p class="muted" style="margin:14px 4px 4px">Marksman is a hobby project by a
     software developer — not a coach, instructor, doctor or lawyer. It computes
     metrics for personal progress tracking only. Tiers are practice standards
