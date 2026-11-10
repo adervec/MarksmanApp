@@ -66,12 +66,24 @@ def main() -> int:
         shutil.rmtree(OUT)
     os.makedirs(OUT)
 
-    # The UI, straight from the package: one page, not a copy that drifts.
-    shutil.copy2(os.path.join(ROOT, "marksman", "webapp", "index.html"),
-                 os.path.join(OUT, "index.html"))
+    build = _build_id()
+
+    # The UI, straight from the package: one page, not a copy that drifts. The
+    # only edit is the version stamp, so the build shown in the app is the
+    # commit it was built from rather than a file date.
+    with open(os.path.join(ROOT, "marksman", "webapp", "index.html"),
+              encoding="utf-8") as fh:
+        page = fh.read()
+    stamp = '<meta name="app-version" content="dev">'
+    if stamp not in page:
+        print("build failed: the page has no app-version meta to stamp")
+        return 1
+    page = page.replace(stamp, '<meta name="app-version" content="%s">' % build, 1)
+    with open(os.path.join(OUT, "index.html"), "w",
+              encoding="utf-8", newline="\n") as fh:
+        fh.write(page)
 
     # PWA plumbing, with the cache stamped so a deploy actually reaches people.
-    build = _build_id()
     for name in sorted(os.listdir(os.path.join(ROOT, "site"))):
         src = os.path.join(ROOT, "site", name)
         if not os.path.isfile(src):

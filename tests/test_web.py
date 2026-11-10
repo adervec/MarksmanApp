@@ -105,6 +105,39 @@ class TestWeb(unittest.TestCase):
         for needle in (b'id="orient"', b"mk_orient", b"rotcw", b"rotccw"):
             self.assertIn(needle, raw)
 
+    def test_drive_account_shows_the_google_profile_picture(self):
+        # House standard: the picture sits beside the name when Drive is linked.
+        _, raw = self._call("/")
+        for needle in (
+            b"acctPic = j.picture",                              # kept from userinfo
+            b'setAttribute("referrerpolicy", "no-referrer")',    # no page address to Google
+            b"acctPic = null",                                   # cleared on sign-out
+        ):
+            self.assertIn(needle, raw)
+        # Nothing extra when there is no picture, and no broken icon when the
+        # URL will not load.
+        self.assertIn(b"if (acctPic) {", raw)
+        self.assertIn(b"img.onerror", raw)
+
+    def test_erase_control_is_scoped_to_this_app(self):
+        # Every app by this maker shares the adervec.github.io origin, so the
+        # erase control must never reach for the blunt instruments.
+        _, raw = self._call("/")
+        for banned in (b"localStorage.clear()", b"indexedDB.deleteDatabase",
+                       b"caches.delete(name)" + b"  # unscoped"):
+            self.assertNotIn(banned, raw)
+        for needle in (b'id="eraseAll"',
+                       b"BACKEND.erase",                 # only where it can work
+                       b"confirm(",                      # never silently
+                       b"is NOT deleted"):               # says Drive survives
+            self.assertIn(needle, raw)
+
+    def test_page_declares_a_version_to_stamp(self):
+        # build_site.py rewrites this; without it the build stamp in the app
+        # falls back to a file date.
+        _, raw = self._call("/")
+        self.assertIn(b'<meta name="app-version" content=', raw)
+
     def test_page_uses_the_house_font(self):
         # Atkinson Hyperlegible by default via the shared font.js, with a reader-facing picker.
         _, raw = self._call("/")

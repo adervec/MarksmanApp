@@ -13,6 +13,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Marksman">
 <title>Marksman</title>
+<meta name="app-version" content="dev">
 <!-- house font: Atkinson Hyperlegible by default, reader-changeable (see the Font card) -->
 <script src="https://adervec.github.io/font.js"></script>
 <script src="boot.js"></script>
@@ -49,6 +50,8 @@ section{display:none}section.on{display:block}
 h2{font-size:13px;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;
    margin:16px 4px 8px}
 .muted{color:var(--mut);font-size:13px}
+#dAcct{display:flex;align-items:center;gap:8px}
+#dAcct img{width:24px;height:24px;border-radius:50%;object-fit:cover;flex:0 0 auto}
 .big{font-size:26px;font-weight:700}
 select,input,textarea{width:100%;background:var(--field);color:var(--fg);
   border:1px solid var(--line);border-radius:8px;padding:10px;font-size:16px}
@@ -131,6 +134,13 @@ nav button{font-size:13px}
       uploaded.</div>
     <div id="coachHost" style="margin-top:8px"></div>
     <div id="coachReply" class="muted" style="display:none;white-space:pre-wrap;margin-top:10px"></div>
+  </div>
+  <h2>Your data</h2>
+  <div class="card">
+    <p class="muted" id="eraseWhere">Everything you log stays on this device.</p>
+    <div style="height:6px"></div>
+    <button class="ghost hide" id="eraseAll" style="width:100%">Erase everything on this device</button>
+    <p class="muted" id="eraseMsg"></p>
   </div>
   <h2>Font</h2>
   <div class="card"><app-font-picker></app-font-picker>
@@ -826,7 +836,7 @@ const clientId = () => DRIVE.clientId.trim() || (originAllowed() ? BUILTIN_CLIEN
 // Takes a pasted folder link or a bare id — the id is the long token in the URL.
 const folderId = s => (String(s || "").match(/[-\w]{20,}/) || [""])[0];
 
-let tok = null, acct = null, dFiles = [], dBuf = null;
+let tok = null, acct = null, acctPic = null, dFiles = [], dBuf = null;
 const tokenCovers = need => !!tok && tok.exp > Date.now() + 60000 &&
   need.split(" ").every(s => tok.scope.indexOf(s) >= 0);
 
@@ -898,7 +908,11 @@ async function fetchAcct(){
   try {
     const r = await fetch("https://www.googleapis.com/oauth2/v3/userinfo",
                           {headers: {Authorization: "Bearer " + tok.value}});
-    if (r.ok) { const j = await r.json(); acct = j.email || j.name || ""; }
+    if (r.ok) {
+      const j = await r.json();
+      acct = j.email || j.name || "";
+      acctPic = j.picture || "";
+    }
   } catch (e) { /* cosmetic only */ }
 }
 
@@ -946,7 +960,24 @@ function driveUi(msg){
   $("dConnect").classList.toggle("hide", on);
   $("dSync").classList.toggle("hide", !on);
   $("dOut").classList.toggle("hide", !on);
-  $("dAcct").textContent = on && acct ? "Signed in as " + acct : "";
+  // Built as nodes, not innerHTML: the name comes back from Google, and a
+  // display name is not something to paste into markup.
+  const who = $("dAcct");
+  who.textContent = "";
+  if (on && acct) {
+    if (acctPic) {
+      const img = el("img");
+      img.src = acctPic;
+      img.alt = "";
+      // Don't hand Google the address of the page the picture is shown on.
+      img.setAttribute("referrerpolicy", "no-referrer");
+      // Offline, or an expired URL: show the name on its own rather than a
+      // broken-image icon.
+      img.onerror = () => img.remove();
+      who.appendChild(img);
+    }
+    who.appendChild(document.createTextNode("Signed in as " + acct));
+  }
   $("dSyncMsg").textContent = typeof msg === "string" ? msg
     : DRIVE.syncedAt ? "Last synced " + new Date(DRIVE.syncedAt).toLocaleString() : "";
 }
@@ -963,7 +994,7 @@ async function runSync(label){
 $("dConnect").onclick = () => runSync("Connecting…");
 $("dSync").onclick = () => runSync("Syncing…");
 $("dOut").onclick = () => {
-  tok = null; acct = null; DRIVE.linked = false; saveDrive();
+  tok = null; acct = null; acctPic = null; DRIVE.linked = false; saveDrive();
   driveUi("Signed out on this device. Your sessions stay here.");
 };
 $("dSaveClient").onclick = () => {
@@ -1032,6 +1063,39 @@ async function useImage(bytes, name, targetName, mode, say){
   say("");
   toast("Found " + res.shots.length + " hits in " + name + " — check them, then save.");
   return res.shots.length;
+}
+
+// Only offered where it can actually do the job: served by 'marksman web',
+// the sessions live in a JSON file on that machine and no button in a browser
+// should pretend to delete it.
+if (BACKEND.erase) {
+  $("eraseAll").classList.remove("hide");
+  $("eraseWhere").textContent =
+    "Everything you log stays on this device, in this browser's storage.";
+  $("eraseAll").onclick = async () => {
+    if (!confirm("Erase every Marksman session, blaster, goal and installed " +
+                 "pack from this device?\n\n" +
+                 "This cannot be undone. Your Google Drive copy, if you " +
+                 "have one, is NOT deleted.")) return;
+    $("eraseAll").disabled = true;
+    $("eraseMsg").textContent = "Erasing…";
+    try {
+      await BACKEND.erase();
+      tok = null; acct = null; acctPic = null;     // signed out of Drive too
+      DRIVE.linked = false;
+      $("eraseMsg").textContent =
+        "Erased, and signed out of Drive. Your Drive copy was not touched. " +
+        "Reloading…";
+      setTimeout(() => location.reload(), 1500);
+    } catch (e) {
+      $("eraseAll").disabled = false;
+      $("eraseMsg").textContent = "Could not erase: " + e.message;
+    }
+  };
+} else {
+  $("eraseWhere").textContent =
+    "Your sessions live in marksman_data.json on the machine running " +
+    "'marksman web' — delete that file to erase them.";
 }
 
 $("pickPhoto").onclick = () => $("photoFile").click();
