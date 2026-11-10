@@ -166,6 +166,37 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 10000);
   }
 
+  // Everything this app has put on this device. Deliberately NOT
+  // localStorage.clear(), indexedDB.deleteDatabase("/data") or caches wholesale:
+  // every app on adervec.github.io shares this origin, the IDBFS database is
+  // named after its mount path and a sibling Pyodide app would be sitting in the
+  // same one, and portal-installed / portal-activity are shared structures this
+  // app only contributes a slice of.
+  const MY_KEYS = ["mk_orient", "mk-drive", "mk-coach-reply"];
+  const ME = "MarksmanApp";
+
+  const WIPE_PY = [
+    "import os, shutil",
+    "shutil.rmtree('/data/packs', ignore_errors=True)",
+    "os.makedirs('/data/packs', exist_ok=True)",
+    "_p = '" + DB + "'",
+    "os.path.exists(_p) and os.remove(_p)",
+  ].join("\n");
+
+  function forgetShared() {
+    // Take this app's row out of the portal's shared structures, leave the rest.
+    try {
+      const reg = JSON.parse(localStorage.getItem("portal-installed") || "{}");
+      delete reg[ME];
+      localStorage.setItem("portal-installed", JSON.stringify(reg));
+    } catch (e) { /* absent or unreadable: nothing of ours in it */ }
+    try {
+      const acts = JSON.parse(localStorage.getItem("portal-activity") || "[]");
+      localStorage.setItem("portal-activity",
+                           JSON.stringify(acts.filter(a => a && a[1] !== ME)));
+    } catch (e) { /* same */ }
+  }
+
   window.MARKSMAN_BACKEND = {
     // There is no terminal behind the installed app, so it must not send
     // people to one. Packs ride along with the build.
@@ -184,6 +215,28 @@
       await ready;
       const out = unwrap(py.globals.get("_fetch")(path, "{}"));
       save("marksman-sessions" + path.slice(6), out.mime, out.text);
+    },
+
+    // Wipes this app off this device. The copy in Google Drive is not touched:
+    // nothing here holds a Drive token after sign-out, and deleting someone's
+    // backup because they cleared a phone would be the wrong call to make for
+    // them.
+    async erase() {
+      await ready;
+      await py.runPythonAsync(WIPE_PY);
+      await syncfs(false);                       // make the deletion stick
+      for (const k of MY_KEYS) {
+        try { localStorage.removeItem(k); } catch (e) { /* private mode */ }
+      }
+      forgetShared();
+      for (const name of await caches.keys()) {
+        if (name.startsWith("marksman-")) await caches.delete(name);
+      }
+      if ("serviceWorker" in navigator) {
+        for (const r of await navigator.serviceWorker.getRegistrations()) {
+          if (r.scope === new URL("./", location.href).href) await r.unregister();
+        }
+      }
     },
 
     // Opened synchronously: a popup blocker will not wait for the engine.

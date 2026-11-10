@@ -13,6 +13,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Marksman">
 <title>Marksman</title>
+<meta name="app-version" content="dev">
 <!-- house font: Atkinson Hyperlegible by default, reader-changeable (see the Font card) -->
 <script src="https://adervec.github.io/font.js"></script>
 <script src="boot.js"></script>
@@ -133,6 +134,13 @@ nav button{font-size:13px}
       uploaded.</div>
     <div id="coachHost" style="margin-top:8px"></div>
     <div id="coachReply" class="muted" style="display:none;white-space:pre-wrap;margin-top:10px"></div>
+  </div>
+  <h2>Your data</h2>
+  <div class="card">
+    <p class="muted" id="eraseWhere">Everything you log stays on this device.</p>
+    <div style="height:6px"></div>
+    <button class="ghost hide" id="eraseAll" style="width:100%">Erase everything on this device</button>
+    <p class="muted" id="eraseMsg"></p>
   </div>
   <h2>Font</h2>
   <div class="card"><app-font-picker></app-font-picker>
@@ -1055,6 +1063,39 @@ async function useImage(bytes, name, targetName, mode, say){
   say("");
   toast("Found " + res.shots.length + " hits in " + name + " — check them, then save.");
   return res.shots.length;
+}
+
+// Only offered where it can actually do the job: served by 'marksman web',
+// the sessions live in a JSON file on that machine and no button in a browser
+// should pretend to delete it.
+if (BACKEND.erase) {
+  $("eraseAll").classList.remove("hide");
+  $("eraseWhere").textContent =
+    "Everything you log stays on this device, in this browser's storage.";
+  $("eraseAll").onclick = async () => {
+    if (!confirm("Erase every Marksman session, blaster, goal and installed " +
+                 "pack from this device?\n\n" +
+                 "This cannot be undone. Your Google Drive copy, if you " +
+                 "have one, is NOT deleted.")) return;
+    $("eraseAll").disabled = true;
+    $("eraseMsg").textContent = "Erasing…";
+    try {
+      await BACKEND.erase();
+      tok = null; acct = null; acctPic = null;     // signed out of Drive too
+      DRIVE.linked = false;
+      $("eraseMsg").textContent =
+        "Erased, and signed out of Drive. Your Drive copy was not touched. " +
+        "Reloading…";
+      setTimeout(() => location.reload(), 1500);
+    } catch (e) {
+      $("eraseAll").disabled = false;
+      $("eraseMsg").textContent = "Could not erase: " + e.message;
+    }
+  };
+} else {
+  $("eraseWhere").textContent =
+    "Your sessions live in marksman_data.json on the machine running " +
+    "'marksman web' — delete that file to erase them.";
 }
 
 $("pickPhoto").onclick = () => $("photoFile").click();
