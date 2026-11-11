@@ -163,6 +163,22 @@ class TestWeb(unittest.TestCase):
                      b"app-license", b"app-source", b"app-data-note"):
             self.assertIn(b'<meta name="' + name + b'"', raw)
 
+    def test_cowork_channel_describes_itself(self):
+        # cowork.js v2 reviews a reply before applying it. Without a channel
+        # descriptor the panel can only show raw JSON, so these are the parts
+        # that make the review mean something -- and the undo that follows it.
+        _, raw = self._call("/")
+        self.assertIn(b"channels: {", raw)
+        for needle in (b'label: "Shooting coach"',
+                       b"preview:",            # rows to tick
+                       b"acceptedIds",         # honours what was ticked
+                       b"undo: {prev: prev}",  # JSON-serialisable undo data
+                       b"undo: data =>"):      # and the reverse of one apply
+            self.assertIn(needle, raw)
+        # The v1 callback stays: a cowork.js cached before channels existed
+        # still has to be able to apply a reply.
+        self.assertIn(b"apply: (ch, reply) => setCoach(", raw)
+
     def test_page_uses_the_house_font(self):
         # Atkinson Hyperlegible by default via the shared font.js, with a reader-facing picker.
         _, raw = self._call("/")

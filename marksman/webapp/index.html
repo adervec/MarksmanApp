@@ -1204,6 +1204,19 @@ function mountCoach(){
   coachMounted = true;
   const show = text => { out.textContent = text || ""; out.style.display = text ? "block" : "none"; };
   try { show(localStorage.getItem("mk-coach-reply") || ""); } catch (e) { /* private mode */ }
+
+  // An agent's reply is whatever it wrote; take the advice out of it, or show
+  // the raw thing rather than silently dropping a reply we did not expect.
+  const coachText = reply => typeof reply === "string" ? reply
+    : (reply && (reply.reply || (reply.payload && reply.payload.reply)))
+      || JSON.stringify(reply, null, 2);
+  const readCoach = () => {
+    try { return localStorage.getItem("mk-coach-reply") || ""; } catch (e) { return ""; }
+  };
+  const setCoach = text => {
+    try { localStorage.setItem("mk-coach-reply", text); } catch (e) { /* quota */ }
+    show(text);
+  };
   loadCowork().then(cw => {
     if (!cw || host.childElementCount) return;
     cw.mount(host, {
@@ -1229,13 +1242,36 @@ function mountCoach(){
           "coach/INSTRUCTIONS.md": COACH_INSTRUCTIONS,
         };
       },
-      apply: (ch, reply) => {
-        const text = typeof reply === "string" ? reply
-          : (reply && (reply.reply || (reply.payload && reply.payload.reply)))
-            || JSON.stringify(reply, null, 2);
-        try { localStorage.setItem("mk-coach-reply", text); } catch (e) { /* quota */ }
-        show(text);
+      // What this channel is and what applying it would do. Without this the
+      // panel can only offer the raw reply, which is no basis for a decision.
+      channels: {
+        coach: {
+          label: "Shooting coach",
+          preview: reply => {
+            const text = coachText(reply);
+            if (!text) return [];
+            return [{id: "reply",
+                     label: "Show this advice (replaces the current one)",
+                     detail: text.slice(0, 400)}];
+          },
+          apply: (reply, acceptedIds) => {
+            if (acceptedIds && acceptedIds.indexOf("reply") < 0) {
+              return {summary: "Kept the advice already showing."};
+            }
+            const text = coachText(reply);
+            if (!text) return {summary: "That reply had no advice in it."};
+            const prev = readCoach();          // JSON-safe: undo carries a string
+            setCoach(text);
+            return {summary: prev ? "Replaced the coach's advice."
+                                  : "Showed the coach's first advice.",
+                    undo: {prev: prev}};
+          },
+          undo: data => { setCoach((data && data.prev) || ""); },
+        },
       },
+      // v1 fallback: a cowork.js cached from before channels existed still
+      // works, and ignores the block above entirely.
+      apply: (ch, reply) => setCoach(coachText(reply)),
     });
   });
 }
