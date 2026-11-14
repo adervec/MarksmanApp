@@ -119,7 +119,7 @@ nav button{font-size:13px}
 <body>
 <div id="rot">
 <div id="scroll">
-<header><b><i class="dart"></i>MARKSMAN</b><span class="hright">
+<header><b><i class="dart"></i>MARKSMAN</b><span class="hright"><app-account size="24" title="Google Drive sync"></app-account>
   <button id="orient" aria-label="Screen orientation"
     title="lock the layout portrait or landscape">auto</button>
   <span id="points" class="muted"></span></span></header>
@@ -844,6 +844,7 @@ const clientId = () => DRIVE.clientId.trim() || (originAllowed() ? BUILTIN_CLIEN
 const folderId = s => (String(s || "").match(/[-\w]{20,}/) || [""])[0];
 
 let tok = null, acct = null, acctPic = null, dFiles = [], dBuf = null;
+document.addEventListener('app-account-click', () => { const d = document.getElementById('dAcct'); if (d) d.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
 const tokenCovers = need => !!tok && tok.exp > Date.now() + 60000 &&
   need.split(" ").every(s => tok.scope.indexOf(s) >= 0);
 
@@ -919,6 +920,7 @@ async function fetchAcct(){
       const j = await r.json();
       acct = j.email || j.name || "";
       acctPic = j.picture || "";
+      window.appFont?.setAccount({ name: j.name || "", email: j.email || "", picture: j.picture || "" }); // house standard: picture in the header
     }
   } catch (e) { /* cosmetic only */ }
 }
@@ -1001,7 +1003,7 @@ async function runSync(label){
 $("dConnect").onclick = () => runSync("Connecting…");
 $("dSync").onclick = () => runSync("Syncing…");
 $("dOut").onclick = () => {
-  tok = null; acct = null; acctPic = null; DRIVE.linked = false; saveDrive();
+  tok = null; acct = null; acctPic = null; DRIVE.linked = false; saveDrive(); window.appFont?.setAccount(null);
   driveUi("Signed out on this device. Your sessions stay here.");
 };
 $("dSaveClient").onclick = () => {
@@ -1088,7 +1090,7 @@ if (BACKEND.erase) {
     $("eraseMsg").textContent = "Erasing…";
     try {
       await BACKEND.erase();
-      tok = null; acct = null; acctPic = null;     // signed out of Drive too
+      tok = null; acct = null; acctPic = null; window.appFont?.setAccount(null);     // signed out of Drive too
       DRIVE.linked = false;
       $("eraseMsg").textContent =
         "Erased, and signed out of Drive. Your Drive copy was not touched. " +

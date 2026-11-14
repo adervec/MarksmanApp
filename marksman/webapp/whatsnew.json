@@ -1,30 +1,36 @@
 [
-  {
-    "date": "2026-11-10",
-    "items": [
-      "The coach panel now shows you the advice before it replaces what is on screen, so you can accept it, skip it, or undo it afterwards.",
-      "Erase everything: Home, under Your data, now wipes every session, blaster, goal and installed pack off this device. It asks first, and it does not touch your Google Drive copy.",
-      "Your Google profile picture now shows beside your account name on the Drive tab."
-    ]
-  },
-  {
-    "date": "2026-11-09",
-    "items": [
-      "New house font, Atkinson Hyperlegible, designed to be easy to read. Change it any time under Home, Font."
-    ]
-  },
-  {
-    "date": "2026-09-07",
-    "items": [
-      "Sessions you log now count towards your practice on the maker's app portal."
-    ]
-  },
-  {
-    "date": "2026-09-06",
-    "items": [
-      "Marksman is now an app you can install. Open it in a browser, install it from the address bar or Add to Home Screen, and it runs offline with its own icon, the same on a phone as on a desktop.",
-      "Photo of the target: on the Log tab, pick a photo straight from your camera roll and Marksman finds the hits for you to check. Photos from a phone camera work now, not just PNG.",
-      "Print a target face at true physical size from the Log tab, on A4, Letter, A3 or A5."
-    ]
-  }
+ {
+  "date": "2026-11-13",
+  "items": [
+   "While Google Drive sync is on, your Google picture now sits at the top of the app on every screen, so you can always see which account is syncing. Tap it to open the sync settings."
+  ]
+ },
+ {
+  "date": "2026-11-10",
+  "items": [
+   "The coach panel now shows you the advice before it replaces what is on screen, so you can accept it, skip it, or undo it afterwards.",
+   "Erase everything: Home, under Your data, now wipes every session, blaster, goal and installed pack off this device. It asks first, and it does not touch your Google Drive copy.",
+   "Your Google profile picture now shows beside your account name on the Drive tab."
+  ]
+ },
+ {
+  "date": "2026-11-09",
+  "items": [
+   "New house font, Atkinson Hyperlegible, designed to be easy to read. Change it any time under Home, Font."
+  ]
+ },
+ {
+  "date": "2026-09-07",
+  "items": [
+   "Sessions you log now count towards your practice on the maker's app portal."
+  ]
+ },
+ {
+  "date": "2026-09-06",
+  "items": [
+   "Marksman is now an app you can install. Open it in a browser, install it from the address bar or Add to Home Screen, and it runs offline with its own icon, the same on a phone as on a desktop.",
+   "Photo of the target: on the Log tab, pick a photo straight from your camera roll and Marksman finds the hits for you to check. Photos from a phone camera work now, not just PNG.",
+   "Print a target face at true physical size from the Log tab, on A4, Letter, A3 or A5."
+  ]
+ }
 ]
